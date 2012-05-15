@@ -1,0 +1,440 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A3665D861561FAC7000E3AF2 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D851561FAC7000E3AF2 /* UIKit.framework */; };
+		A3665D881561FAC7000E3AF2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D871561FAC7000E3AF2 /* Foundation.framework */; };
+		A3665D8E1561FAC7000E3AF2 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A3665D8C1561FAC7000E3AF2 /* InfoPlist.strings */; };
+		A3665D901561FAC7000E3AF2 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A3665D8F1561FAC7000E3AF2 /* main.m */; };
+		A3665D941561FAC7000E3AF2 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = A3665D931561FAC7000E3AF2 /* AppDelegate.m */; };
+		A3665D971561FAC7000E3AF2 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A3665D961561FAC7000E3AF2 /* ViewController.m */; };
+		A3665D9A1561FAC7000E3AF2 /* ViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = A3665D981561FAC7000E3AF2 /* ViewController.xib */; };
+		A3665DA21561FAC7000E3AF2 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665DA11561FAC7000E3AF2 /* SenTestingKit.framework */; };
+		A3665DA31561FAC7000E3AF2 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D851561FAC7000E3AF2 /* UIKit.framework */; };
+		A3665DA41561FAC7000E3AF2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D871561FAC7000E3AF2 /* Foundation.framework */; };
+		A3665DAC1561FAC7000E3AF2 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A3665DAA1561FAC7000E3AF2 /* InfoPlist.strings */; };
+		A3665DAF1561FAC7000E3AF2 /* distracted_drivingTests.m in Sources */ = {isa = PBXBuildFile; fileRef = A3665DAE1561FAC7000E3AF2 /* distracted_drivingTests.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A3665DA51561FAC7000E3AF2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A3665D781561FAC7000E3AF2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A3665D801561FAC7000E3AF2;
+			remoteInfo = "distracted-driving";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A3665D811561FAC7000E3AF2 /* distracted-driving.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "distracted-driving.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3665D851561FAC7000E3AF2 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		A3665D871561FAC7000E3AF2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		A3665D8B1561FAC7000E3AF2 /* distracted-driving-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "distracted-driving-Info.plist"; sourceTree = "<group>"; };
+		A3665D8D1561FAC7000E3AF2 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A3665D8F1561FAC7000E3AF2 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		A3665D911561FAC7000E3AF2 /* distracted-driving-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "distracted-driving-Prefix.pch"; sourceTree = "<group>"; };
+		A3665D921561FAC7000E3AF2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		A3665D931561FAC7000E3AF2 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		A3665D951561FAC7000E3AF2 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		A3665D961561FAC7000E3AF2 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		A3665D991561FAC7000E3AF2 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ViewController.xib; sourceTree = "<group>"; };
+		A3665DA01561FAC7000E3AF2 /* distracted-drivingTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "distracted-drivingTests.octest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3665DA11561FAC7000E3AF2 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		A3665DA91561FAC7000E3AF2 /* distracted-drivingTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "distracted-drivingTests-Info.plist"; sourceTree = "<group>"; };
+		A3665DAB1561FAC7000E3AF2 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A3665DAD1561FAC7000E3AF2 /* distracted_drivingTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = distracted_drivingTests.h; sourceTree = "<group>"; };
+		A3665DAE1561FAC7000E3AF2 /* distracted_drivingTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = distracted_drivingTests.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A3665D7E1561FAC7000E3AF2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3665D861561FAC7000E3AF2 /* UIKit.framework in Frameworks */,
+				A3665D881561FAC7000E3AF2 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3665D9C1561FAC7000E3AF2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3665DA21561FAC7000E3AF2 /* SenTestingKit.framework in Frameworks */,
+				A3665DA31561FAC7000E3AF2 /* UIKit.framework in Frameworks */,
+				A3665DA41561FAC7000E3AF2 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A3665D761561FAC7000E3AF2 = {
+			isa = PBXGroup;
+			children = (
+				A3665D891561FAC7000E3AF2 /* distracted-driving */,
+				A3665DA71561FAC7000E3AF2 /* distracted-drivingTests */,
+				A3665D841561FAC7000E3AF2 /* Frameworks */,
+				A3665D821561FAC7000E3AF2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A3665D821561FAC7000E3AF2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A3665D811561FAC7000E3AF2 /* distracted-driving.app */,
+				A3665DA01561FAC7000E3AF2 /* distracted-drivingTests.octest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A3665D841561FAC7000E3AF2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A3665D851561FAC7000E3AF2 /* UIKit.framework */,
+				A3665D871561FAC7000E3AF2 /* Foundation.framework */,
+				A3665DA11561FAC7000E3AF2 /* SenTestingKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A3665D891561FAC7000E3AF2 /* distracted-driving */ = {
+			isa = PBXGroup;
+			children = (
+				A3665D921561FAC7000E3AF2 /* AppDelegate.h */,
+				A3665D931561FAC7000E3AF2 /* AppDelegate.m */,
+				A3665D951561FAC7000E3AF2 /* ViewController.h */,
+				A3665D961561FAC7000E3AF2 /* ViewController.m */,
+				A3665D981561FAC7000E3AF2 /* ViewController.xib */,
+				A3665D8A1561FAC7000E3AF2 /* Supporting Files */,
+			);
+			path = "distracted-driving";
+			sourceTree = "<group>";
+		};
+		A3665D8A1561FAC7000E3AF2 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				A3665D8B1561FAC7000E3AF2 /* distracted-driving-Info.plist */,
+				A3665D8C1561FAC7000E3AF2 /* InfoPlist.strings */,
+				A3665D8F1561FAC7000E3AF2 /* main.m */,
+				A3665D911561FAC7000E3AF2 /* distracted-driving-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		A3665DA71561FAC7000E3AF2 /* distracted-drivingTests */ = {
+			isa = PBXGroup;
+			children = (
+				A3665DAD1561FAC7000E3AF2 /* distracted_drivingTests.h */,
+				A3665DAE1561FAC7000E3AF2 /* distracted_drivingTests.m */,
+				A3665DA81561FAC7000E3AF2 /* Supporting Files */,
+			);
+			path = "distracted-drivingTests";
+			sourceTree = "<group>";
+		};
+		A3665DA81561FAC7000E3AF2 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				A3665DA91561FAC7000E3AF2 /* distracted-drivingTests-Info.plist */,
+				A3665DAA1561FAC7000E3AF2 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A3665D801561FAC7000E3AF2 /* distracted-driving */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3665DB21561FAC7000E3AF2 /* Build configuration list for PBXNativeTarget "distracted-driving" */;
+			buildPhases = (
+				A3665D7D1561FAC7000E3AF2 /* Sources */,
+				A3665D7E1561FAC7000E3AF2 /* Frameworks */,
+				A3665D7F1561FAC7000E3AF2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "distracted-driving";
+			productName = "distracted-driving";
+			productReference = A3665D811561FAC7000E3AF2 /* distracted-driving.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A3665D9F1561FAC7000E3AF2 /* distracted-drivingTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3665DB51561FAC7000E3AF2 /* Build configuration list for PBXNativeTarget "distracted-drivingTests" */;
+			buildPhases = (
+				A3665D9B1561FAC7000E3AF2 /* Sources */,
+				A3665D9C1561FAC7000E3AF2 /* Frameworks */,
+				A3665D9D1561FAC7000E3AF2 /* Resources */,
+				A3665D9E1561FAC7000E3AF2 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A3665DA61561FAC7000E3AF2 /* PBXTargetDependency */,
+			);
+			name = "distracted-drivingTests";
+			productName = "distracted-drivingTests";
+			productReference = A3665DA01561FAC7000E3AF2 /* distracted-drivingTests.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A3665D781561FAC7000E3AF2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0420;
+			};
+			buildConfigurationList = A3665D7B1561FAC7000E3AF2 /* Build configuration list for PBXProject "distracted-driving" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = A3665D761561FAC7000E3AF2;
+			productRefGroup = A3665D821561FAC7000E3AF2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A3665D801561FAC7000E3AF2 /* distracted-driving */,
+				A3665D9F1561FAC7000E3AF2 /* distracted-drivingTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A3665D7F1561FAC7000E3AF2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3665D8E1561FAC7000E3AF2 /* InfoPlist.strings in Resources */,
+				A3665D9A1561FAC7000E3AF2 /* ViewController.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3665D9D1561FAC7000E3AF2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3665DAC1561FAC7000E3AF2 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A3665D9E1561FAC7000E3AF2 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A3665D7D1561FAC7000E3AF2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3665D901561FAC7000E3AF2 /* main.m in Sources */,
+				A3665D941561FAC7000E3AF2 /* AppDelegate.m in Sources */,
+				A3665D971561FAC7000E3AF2 /* ViewController.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3665D9B1561FAC7000E3AF2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3665DAF1561FAC7000E3AF2 /* distracted_drivingTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A3665DA61561FAC7000E3AF2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A3665D801561FAC7000E3AF2 /* distracted-driving */;
+			targetProxy = A3665DA51561FAC7000E3AF2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		A3665D8C1561FAC7000E3AF2 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A3665D8D1561FAC7000E3AF2 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		A3665D981561FAC7000E3AF2 /* ViewController.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A3665D991561FAC7000E3AF2 /* en */,
+			);
+			name = ViewController.xib;
+			sourceTree = "<group>";
+		};
+		A3665DAA1561FAC7000E3AF2 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A3665DAB1561FAC7000E3AF2 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		A3665DB01561FAC7000E3AF2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		A3665DB11561FAC7000E3AF2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A3665DB31561FAC7000E3AF2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "distracted-driving/distracted-driving-Prefix.pch";
+				INFOPLIST_FILE = "distracted-driving/distracted-driving-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		A3665DB41561FAC7000E3AF2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "distracted-driving/distracted-driving-Prefix.pch";
+				INFOPLIST_FILE = "distracted-driving/distracted-driving-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+		A3665DB61561FAC7000E3AF2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/distracted-driving.app/distracted-driving";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(DEVELOPER_LIBRARY_DIR)/Frameworks",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "distracted-driving/distracted-driving-Prefix.pch";
+				INFOPLIST_FILE = "distracted-drivingTests/distracted-drivingTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		A3665DB71561FAC7000E3AF2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/distracted-driving.app/distracted-driving";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(DEVELOPER_LIBRARY_DIR)/Frameworks",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "distracted-driving/distracted-driving-Prefix.pch";
+				INFOPLIST_FILE = "distracted-drivingTests/distracted-drivingTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A3665D7B1561FAC7000E3AF2 /* Build configuration list for PBXProject "distracted-driving" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3665DB01561FAC7000E3AF2 /* Debug */,
+				A3665DB11561FAC7000E3AF2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3665DB21561FAC7000E3AF2 /* Build configuration list for PBXNativeTarget "distracted-driving" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3665DB31561FAC7000E3AF2 /* Debug */,
+				A3665DB41561FAC7000E3AF2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		A3665DB51561FAC7000E3AF2 /* Build configuration list for PBXNativeTarget "distracted-drivingTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3665DB61561FAC7000E3AF2 /* Debug */,
+				A3665DB71561FAC7000E3AF2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A3665D781561FAC7000E3AF2 /* Project object */;
+}
