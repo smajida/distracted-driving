@@ -8,29 +8,43 @@
 
 #import <UIKit/UIKit.h>
 #import <sqlite3.h>
+#import <CoreLocation/CoreLocation.h>
+#import <AVFoundation/AVFoundation.h>
+#import <CoreAudio/CoreAudioTypes.h>
 
 @interface ViewController : UIViewController
 {
-	UIButton	*startButton;
-	UILabel		*recordingLabel;
-	UILabel		*dataLabel;
-	sqlite3		*db;
-	NSTimer		*ticker;
-	BOOL		dataExists;
-	const char	*dbpath;
+	UIButton			*startButton;
+	UILabel				*recordingLabel;
+	UILabel				*dataLabel;
+	sqlite3				*db;
+	NSTimer				*ticker;
+	NSString			*dbpath;
+	CLLocationManager	*locationManager;
+	UIAccelerometer		*accelerometer;
+	AVAudioRecorder		*recorder;
+	int					accelValuesCollected;
+	float				accelX, accelY, accelZ;
 }
 
-@property (nonatomic, retain) IBOutlet UIButton	*startButton;
-@property (nonatomic, retain) IBOutlet UILabel	*recordingLabel;
-@property (nonatomic, retain) IBOutlet UILabel	*dataLabel;
-@property (nonatomic, retain) NSTimer			*ticker;
-@property (nonatomic, assign) const char		*dbpath;
-@property (nonatomic, assign) BOOL				dataExists;
+@property (nonatomic, retain) IBOutlet UIButton		*startButton;
+@property (nonatomic, retain) IBOutlet UILabel		*recordingLabel;
+@property (nonatomic, retain) IBOutlet UILabel		*dataLabel;
+@property (nonatomic, retain) NSTimer				*ticker;
+@property (nonatomic, retain) NSString				*dbpath;
+@property (nonatomic, retain) CLLocationManager		*locationManager;
+@property (nonatomic, retain) UIAccelerometer		*accelerometer;
+@property (nonatomic, retain) AVAudioRecorder		*recorder;
+@property (nonatomic, assign) int					accelValuesCollected;
+@property (nonatomic, assign) float					accelX, accelY, accelZ;
 
-- (void)setDataExists:(BOOL)value;
 - (BOOL)sqlcon;
 - (BOOL)insertRowWithAccelorometer:(NSString *)accelorometer andSound:(NSString *)sound andGps:(NSString *)gps andCompass:(NSString *)compass andBattery:(NSString *)battery;
-- (void)record:(id) sender;
-- (IBAction)toggleButton:(id) sender;
+- (int)numRows;
+- (IBAction)uploadRows:(id)sender;
+- (IBAction)emptyTable:(id)sender;
+- (void)updateDataLabel;
+- (void)record:(id)sender;
+- (IBAction)toggleButton:(id)sender;
 
 @end
