@@ -14,6 +14,7 @@
 
 @synthesize window = _window;
 @synthesize viewController = _viewController;
+@synthesize device;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
@@ -31,19 +32,22 @@
     return YES;
 }
 
-- (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken { 
+- (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
+{
+	// NSString *str = [NSString stringWithFormat:@"Device Token=%@",deviceToken];
+	// NSLog(str);
 	
-    NSString *str = [NSString 
-					 stringWithFormat:@"Device Token=%@",deviceToken];
-    NSLog(str);
+	NSCharacterSet *chars	= [NSCharacterSet characterSetWithCharactersInString:@"< >"];
+	NSString *str			= [[deviceToken description] stringByTrimmingCharactersInSet:chars];
+	device					= [str stringByReplacingOccurrencesOfString:@" " withString:@""];
 	
+	NSLog(@"Device ID: %@", device);
 }
 
-- (void)application:(UIApplication *)app didFailToRegisterForRemoteNotificationsWithError:(NSError *)err { 
-	
+- (void)application:(UIApplication *)app didFailToRegisterForRemoteNotificationsWithError:(NSError *)err
+{
     NSString *str = [NSString stringWithFormat: @"Error: %@", err];
-    NSLog(str);    
-	
+    NSLog(str);
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
@@ -73,7 +77,7 @@
 	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/push.php"]];
 	[request setHTTPMethod:@"POST"];
 	
-	NSString *postString = [NSString stringWithFormat:@"password=driving123~"];
+	NSString *postString = [NSString stringWithFormat:@"password=driving123~&device=%@", device];
 	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
 	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
 	

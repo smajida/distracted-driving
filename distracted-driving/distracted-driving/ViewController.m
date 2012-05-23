@@ -217,7 +217,7 @@
 
 - (void)connection: (NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-	// NSLog(@"Received data %@", data);
+	NSLog(@"Received data %@", data);
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
