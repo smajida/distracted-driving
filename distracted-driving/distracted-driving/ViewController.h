@@ -38,6 +38,7 @@
 @property (nonatomic, assign) int					accelValuesCollected;
 @property (nonatomic, assign) float					accelX, accelY, accelZ;
 
+- (void)warn;
 - (BOOL)sqlcon;
 - (BOOL)insertRowWithAccelorometer:(NSString *)accelorometer andSound:(NSString *)sound andGps:(NSString *)gps andCompass:(NSString *)compass andBattery:(NSString *)battery;
 - (int)numRows;

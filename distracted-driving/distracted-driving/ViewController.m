@@ -12,6 +12,28 @@
 
 @synthesize startButton, recordingLabel, dataLabel, dbpath, ticker, locationManager, accelerometer, recorder, accelValuesCollected, accelX, accelY, accelZ;
 
+// Send a warning to the user
+- (void)warn
+{
+	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_data.php"]];
+	[request setHTTPMethod:@"POST"];
+	
+	NSString *postString = [NSString stringWithFormat:@"password=driving123~"];
+	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	
+	NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+	
+	if(connection)
+	{
+		// NSLog(@"Connection successful.");
+	}
+	else
+	{
+		NSLog(@"Connection failed.");
+	}
+}
+
 // Connect to the SQL database
 - (BOOL)sqlcon
 {

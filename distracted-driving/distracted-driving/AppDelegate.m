@@ -18,11 +18,48 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+	
     // Override point for customization after application launch.
 	self.viewController = [[ViewController alloc] initWithNibName:@"ViewController" bundle:nil]; 
 	self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
+	
+	// Register for Push Notifications
+	NSLog(@"Registering for Push Notifications...");
+	[[UIApplication sharedApplication] registerForRemoteNotificationTypes:(UIRemoteNotificationTypeAlert | UIRemoteNotificationTypeBadge | UIRemoteNotificationTypeSound)];
+	
     return YES;
+}
+
+- (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken { 
+	
+    NSString *str = [NSString 
+					 stringWithFormat:@"Device Token=%@",deviceToken];
+    NSLog(str);
+	
+}
+
+- (void)application:(UIApplication *)app didFailToRegisterForRemoteNotificationsWithError:(NSError *)err { 
+	
+    NSString *str = [NSString stringWithFormat: @"Error: %@", err];
+    NSLog(str);    
+	
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
+{
+	for (id key in userInfo)
+	{
+		NSLog(@"key: %@, value: %@", key, [userInfo objectForKey:key]);
+		NSString *message = nil;
+		
+		NSDictionary *aps = [NSDictionary dictionaryWithDictionary:(NSDictionary *) [userInfo objectForKey:key] ];
+		message = [aps objectForKey:@"alert"];
+		
+		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Warning!" message:message delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+		
+		[alert show];
+	}
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application
@@ -31,6 +68,25 @@
 	 Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
 	 Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
 	 */
+	
+	// Warn the user that something is happening
+	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/push.php"]];
+	[request setHTTPMethod:@"POST"];
+	
+	NSString *postString = [NSString stringWithFormat:@"password=driving123~"];
+	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	
+	NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+	
+	if(connection)
+	{
+		NSLog(@"Connection successful.");
+	}
+	else
+	{
+		NSLog(@"Connection failed.");
+	}
 }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
