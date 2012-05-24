@@ -100,15 +100,7 @@
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
-		NSString *fDevice;
-		
-		if([device isEqualToString:@"Unknown"])
-			fDevice = @"'Unknown'";
-		else
-			fDevice = [NSString stringWithFormat:@"MD5('%@')", device];
-		
-		
-		NSString *nsquery = [NSString stringWithFormat:@"INSERT INTO collected_data (device_id, date, accelorometer, sound, gps, compass, battery) VALUES (%@, datetime('now'), '%@', '%@', '%@', '%@', '%@')", fDevice, accelorometer, sound, gps, compass, battery];
+		NSString *nsquery = [NSString stringWithFormat:@"INSERT INTO collected_data (device_id, date, accelorometer, sound, gps, compass, battery) VALUES ('%@', datetime('now'), '%@', '%@', '%@', '%@', '%@')", device, accelorometer, sound, gps, compass, battery];
 		
 		NSLog(@"Querying: %@", nsquery);
 		
@@ -203,7 +195,7 @@
 			
 			[request setHTTPMethod:@"POST"];
 			
-			NSString *postString = [NSString stringWithFormat:@"date=%@&accelorometer=%@&sound=%@&gps=%@&compass=%@&battery=%@", date, accelorometer, sound, gps, compass, battery];
+			NSString *postString = [NSString stringWithFormat:@"device=%@&date=%@&accelorometer=%@&sound=%@&gps=%@&compass=%@&battery=%@", _device, date, accelorometer, sound, gps, compass, battery];
 			
 			[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
 			
@@ -232,7 +224,7 @@
 
 - (void)connection: (NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-	NSLog(@"Received data %@", data);
+	NSLog(@"Received data: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
