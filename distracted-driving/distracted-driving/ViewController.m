@@ -43,11 +43,11 @@
 	const char		*database;
 	
 	paths		= NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-	dbpath		= [[NSString alloc] initWithString:[[paths objectAtIndex:0] stringByAppendingPathComponent:@"distracted-driving.db"]];
+	dbpath		= [[NSString alloc] initWithString:[[paths objectAtIndex:0] stringByAppendingPathComponent:@"distracted-driving_v1.1.db"]];
 	
 	if([[NSFileManager defaultManager] fileExistsAtPath:dbpath] == NO)
 	{
-		NSString *dbpathFromApp = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"distracted-driving.db"];
+		NSString *dbpathFromApp = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"distracted-driving_v1.1.db"];
 		[[NSFileManager defaultManager] copyItemAtPath:dbpathFromApp toPath:dbpath error:nil];
 		
 		NSLog(@"Database file will be created.");
@@ -110,6 +110,8 @@
 		
 		NSString *nsquery = [NSString stringWithFormat:@"INSERT INTO collected_data (device_id, date, accelorometer, sound, gps, compass, battery) VALUES (%@, datetime('now'), '%@', '%@', '%@', '%@', '%@')", fDevice, accelorometer, sound, gps, compass, battery];
 		
+		NSLog(@"Querying: %@", nsquery);
+		
 		const char *cquery = [nsquery UTF8String];
 		
 		sqlite3_prepare_v2(db, cquery, -1, &query, NULL);
@@ -165,6 +167,7 @@
 - (IBAction)uploadRows:(id)sender
 {
 	NSString		*_id;
+	NSString		*_device;
 	NSString		*date;
 	NSString		*accelorometer;
 	NSString		*sound;
@@ -188,12 +191,13 @@
 		while(sqlite3_step(query) == SQLITE_ROW)
 		{
 			_id				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 0)];
-			date			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 1)];
-			accelorometer	= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 2)];
-			sound			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 3)];
-			gps				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 4)];
-			compass			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 5)];
-			battery			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 6)];
+			_device			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 1)];
+			date			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 2)];
+			accelorometer	= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 3)];
+			sound			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 4)];
+			gps				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 5)];
+			compass			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 6)];
+			battery			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 7)];
 			
 			request			= [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_data.php"]];
 			
@@ -283,7 +287,10 @@
 	NSString *accel, *sound, *gps, *compass, *battery;
 	
 	// Accelorometer
-	accel = [NSString stringWithFormat:@"x: %f, y: %f, z: %f", accelX / accelValuesCollected, accelY / accelValuesCollected, accelZ / accelValuesCollected];
+	if(accelValuesCollected > 0)
+		accel = [NSString stringWithFormat:@"x: %f, y: %f, z: %f", accelX / accelValuesCollected, accelY / accelValuesCollected, accelZ / accelValuesCollected];
+	else
+		accel = @"Unknown";
 	
 	accelX = accelY = accelZ = 0.0;
 	accelValuesCollected = 0;
@@ -293,10 +300,16 @@
 	sound = [NSString stringWithFormat:@"%f", [recorder averagePowerForChannel:0]];
 	
 	// Compass
-	compass = [NSString stringWithFormat:@"%f", locationManager.heading.magneticHeading];
+	if(((int) locationManager.heading.magneticHeading) != 0)
+		compass = [NSString stringWithFormat:@"%f", locationManager.heading.magneticHeading];
+	else
+		compass = @"Unknown";
 	
 	// GPS
-	gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, locationManager.location.speed];
+	if(((int) locationManager.heading.trueHeading) != 0)
+		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, locationManager.location.speed];
+	else
+		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: Unknown, Speed: Unknown", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude];
 	
 	// Battery
 	NSString *state;
@@ -313,7 +326,10 @@
 	if([[UIDevice currentDevice] batteryState] == UIDeviceBatteryStateFull)
 		state = @"Full";
 	
-	battery = [NSString stringWithFormat:@"%f; %@", [[UIDevice currentDevice] batteryLevel], state];
+	if(((int) [[UIDevice currentDevice] batteryLevel]) != -1)
+		battery = [NSString stringWithFormat:@"%f; %@", [[UIDevice currentDevice] batteryLevel], state];
+	else
+		battery = @"Unknown";
 	
 	[self insertRowWithAccelorometer:accel andSound:sound andGps:gps andCompass:compass andBattery:battery];
 	[self updateDataLabel];
