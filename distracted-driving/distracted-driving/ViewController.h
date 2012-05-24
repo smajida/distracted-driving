@@ -20,6 +20,7 @@
 	sqlite3				*db;
 	NSTimer				*ticker;
 	NSString			*dbpath;
+	NSString			*device;
 	CLLocationManager	*locationManager;
 	UIAccelerometer		*accelerometer;
 	AVAudioRecorder		*recorder;
@@ -32,12 +33,14 @@
 @property (nonatomic, retain) IBOutlet UILabel		*dataLabel;
 @property (nonatomic, retain) NSTimer				*ticker;
 @property (nonatomic, retain) NSString				*dbpath;
+@property (nonatomic, retain) NSString				*device;
 @property (nonatomic, retain) CLLocationManager		*locationManager;
 @property (nonatomic, retain) UIAccelerometer		*accelerometer;
 @property (nonatomic, retain) AVAudioRecorder		*recorder;
 @property (nonatomic, assign) int					accelValuesCollected;
 @property (nonatomic, assign) float					accelX, accelY, accelZ;
 
+- (void)setDevice:(NSString *)_device;
 - (void)warn;
 - (BOOL)sqlcon;
 - (BOOL)insertRowWithAccelorometer:(NSString *)accelorometer andSound:(NSString *)sound andGps:(NSString *)gps andCompass:(NSString *)compass andBattery:(NSString *)battery;

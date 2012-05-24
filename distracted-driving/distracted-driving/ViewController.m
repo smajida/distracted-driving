@@ -10,7 +10,7 @@
 
 @implementation ViewController
 
-@synthesize startButton, recordingLabel, dataLabel, dbpath, ticker, locationManager, accelerometer, recorder, accelValuesCollected, accelX, accelY, accelZ;
+@synthesize startButton, recordingLabel, dataLabel, dbpath, device, ticker, locationManager, accelerometer, recorder, accelValuesCollected, accelX, accelY, accelZ;
 
 // Send a warning to the user
 - (void)warn
@@ -37,6 +37,8 @@
 // Connect to the SQL database
 - (BOOL)sqlcon
 {
+	NSLog(@"Connecting to SQL...");
+	
 	NSArray			*paths;
 	const char		*database;
 	
@@ -55,7 +57,7 @@
 		if(sqlite3_open(database, &db) == SQLITE_OK)
 		{
 			char *err;
-			const char *sql = "CREATE TABLE IF NOT EXISTS collected_data (id INTEGER PRIMARY KEY AUTOINCREMENT, date DATETIME, accelorometer TEXT, sound TEXT, gps TEXT, compass TEXT, battery TEXT)";
+			const char *sql = "CREATE TABLE IF NOT EXISTS collected_data (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, date DATETIME, accelorometer TEXT, sound TEXT, gps TEXT, compass TEXT, battery TEXT)";
 			
 			if(sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK)
 			{
@@ -76,7 +78,7 @@
 	{
 		database = [dbpath UTF8String];
 		
-		NSLog(@"Database file was found.");
+		NSLog(@"Database file was found. Path: %@", dbpath);
 		
 		if(sqlite3_open(database, &db) != SQLITE_OK)
 		{
@@ -98,9 +100,15 @@
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
-		NSString *nsquery = [NSString stringWithFormat:@"INSERT INTO collected_data (date, accelorometer, sound, gps, compass, battery) VALUES (datetime('now'), '%@', '%@', '%@', '%@', '%@')", accelorometer, sound, gps, compass, battery];
+		NSString *fDevice;
 		
-		// NSLog(@"Executing query.");
+		if([device isEqualToString:@"Unknown"])
+			fDevice = @"'Unknown'";
+		else
+			fDevice = [NSString stringWithFormat:@"MD5('%@')", device];
+		
+		
+		NSString *nsquery = [NSString stringWithFormat:@"INSERT INTO collected_data (device_id, date, accelorometer, sound, gps, compass, battery) VALUES (%@, datetime('now'), '%@', '%@', '%@', '%@', '%@')", fDevice, accelorometer, sound, gps, compass, battery];
 		
 		const char *cquery = [nsquery UTF8String];
 		
@@ -118,7 +126,10 @@
 		sqlite3_close(db);
 	}
 	else
+	{
 		NSLog(@"Query failed; %s!", sqlite3_errmsg(db));
+		return NO;
+	}
 	
 	return YES;
 }
@@ -364,6 +375,9 @@
 	// Set initial label text
 	[recordingLabel setText:@"You are not recording."];
 	[self updateDataLabel];
+	
+	// Set device ID
+	device = @"Unknown";
 	
 	// Set up GPS
 	locationManager					= [[CLLocationManager alloc] init];

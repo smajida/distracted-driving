@@ -41,6 +41,8 @@
 	NSString *str			= [[deviceToken description] stringByTrimmingCharactersInSet:chars];
 	device					= [str stringByReplacingOccurrencesOfString:@" " withString:@""];
 	
+	[self.viewController setDevice:device];
+	
 	NSLog(@"Device ID: %@", device);
 }
 
