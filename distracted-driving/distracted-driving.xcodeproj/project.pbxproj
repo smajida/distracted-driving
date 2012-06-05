@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A321EC9D157E6F65009D2FD8 /* Icon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A321EC9C157E6F65009D2FD8 /* Icon@2x.png */; };
+		A321EC9F157E6F98009D2FD8 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = A321EC9E157E6F98009D2FD8 /* Icon.png */; };
+		A321ECA1157E71BE009D2FD8 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A321ECA0157E71BE009D2FD8 /* Default@2x.png */; };
+		A321ECA3157E71D9009D2FD8 /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = A321ECA2157E71D9009D2FD8 /* Default.png */; };
+		A32F0B691577DDA30055FF27 /* GradientButton.m in Sources */ = {isa = PBXBuildFile; fileRef = A32F0B681577DDA30055FF27 /* GradientButton.m */; };
+		A32F0B6C1577DEFC0055FF27 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32F0B6B1577DEFC0055FF27 /* QuartzCore.framework */; };
+		A32F0B6E1577FF900055FF27 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32F0B6D1577FF900055FF27 /* MapKit.framework */; };
+		A32F0B71157804040055FF27 /* MapTag.m in Sources */ = {isa = PBXBuildFile; fileRef = A32F0B70157804040055FF27 /* MapTag.m */; };
 		A3665D861561FAC7000E3AF2 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D851561FAC7000E3AF2 /* UIKit.framework */; };
 		A3665D881561FAC7000E3AF2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D871561FAC7000E3AF2 /* Foundation.framework */; };
 		A3665D8E1561FAC7000E3AF2 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A3665D8C1561FAC7000E3AF2 /* InfoPlist.strings */; };
@@ -36,6 +44,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A321EC9C157E6F65009D2FD8 /* Icon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Icon@2x.png"; sourceTree = "<group>"; };
+		A321EC9E157E6F98009D2FD8 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		A321ECA0157E71BE009D2FD8 /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
+		A321ECA2157E71D9009D2FD8 /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
+		A32F0B671577DDA30055FF27 /* GradientButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GradientButton.h; sourceTree = "<group>"; };
+		A32F0B681577DDA30055FF27 /* GradientButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GradientButton.m; sourceTree = "<group>"; };
+		A32F0B6B1577DEFC0055FF27 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		A32F0B6D1577FF900055FF27 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
+		A32F0B6F157804040055FF27 /* MapTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MapTag.h; sourceTree = "<group>"; };
+		A32F0B70157804040055FF27 /* MapTag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MapTag.m; sourceTree = "<group>"; };
 		A3665D811561FAC7000E3AF2 /* distracted-driving.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "distracted-driving.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3665D851561FAC7000E3AF2 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		A3665D871561FAC7000E3AF2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -65,6 +83,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A32F0B6E1577FF900055FF27 /* MapKit.framework in Frameworks */,
+				A32F0B6C1577DEFC0055FF27 /* QuartzCore.framework in Frameworks */,
 				A3BD62261566BC0800CE3DFD /* AVFoundation.framework in Frameworks */,
 				A3BD62241566BBDE00CE3DFD /* CoreAudio.framework in Frameworks */,
 				A3BD62211566B12200CE3DFD /* CoreLocation.framework in Frameworks */,
@@ -90,6 +110,10 @@
 		A3665D761561FAC7000E3AF2 = {
 			isa = PBXGroup;
 			children = (
+				A321ECA2157E71D9009D2FD8 /* Default.png */,
+				A321ECA0157E71BE009D2FD8 /* Default@2x.png */,
+				A321EC9E157E6F98009D2FD8 /* Icon.png */,
+				A321EC9C157E6F65009D2FD8 /* Icon@2x.png */,
 				A3665D891561FAC7000E3AF2 /* distracted-driving */,
 				A3665DA71561FAC7000E3AF2 /* distracted-drivingTests */,
 				A3665D841561FAC7000E3AF2 /* Frameworks */,
@@ -109,6 +133,8 @@
 		A3665D841561FAC7000E3AF2 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A32F0B6D1577FF900055FF27 /* MapKit.framework */,
+				A32F0B6B1577DEFC0055FF27 /* QuartzCore.framework */,
 				A3BD62251566BC0800CE3DFD /* AVFoundation.framework */,
 				A3BD62231566BBDE00CE3DFD /* CoreAudio.framework */,
 				A3BD62201566B12200CE3DFD /* CoreLocation.framework */,
@@ -127,7 +153,11 @@
 				A3665D931561FAC7000E3AF2 /* AppDelegate.m */,
 				A3665D951561FAC7000E3AF2 /* ViewController.h */,
 				A3665D961561FAC7000E3AF2 /* ViewController.m */,
+				A32F0B6F157804040055FF27 /* MapTag.h */,
+				A32F0B70157804040055FF27 /* MapTag.m */,
 				A3665D981561FAC7000E3AF2 /* ViewController.xib */,
+				A32F0B671577DDA30055FF27 /* GradientButton.h */,
+				A32F0B681577DDA30055FF27 /* GradientButton.m */,
 				A3665D8A1561FAC7000E3AF2 /* Supporting Files */,
 			);
 			path = "distracted-driving";
@@ -235,6 +265,10 @@
 			files = (
 				A3665D8E1561FAC7000E3AF2 /* InfoPlist.strings in Resources */,
 				A3665D9A1561FAC7000E3AF2 /* ViewController.xib in Resources */,
+				A321EC9D157E6F65009D2FD8 /* Icon@2x.png in Resources */,
+				A321EC9F157E6F98009D2FD8 /* Icon.png in Resources */,
+				A321ECA1157E71BE009D2FD8 /* Default@2x.png in Resources */,
+				A321ECA3157E71D9009D2FD8 /* Default.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -272,6 +306,8 @@
 				A3665D901561FAC7000E3AF2 /* main.m in Sources */,
 				A3665D941561FAC7000E3AF2 /* AppDelegate.m in Sources */,
 				A3665D971561FAC7000E3AF2 /* ViewController.m in Sources */,
+				A32F0B691577DDA30055FF27 /* GradientButton.m in Sources */,
+				A32F0B71157804040055FF27 /* MapTag.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

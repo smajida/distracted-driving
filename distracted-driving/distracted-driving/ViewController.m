@@ -10,58 +10,52 @@
 
 @implementation ViewController
 
-@synthesize startButton, recordingLabel, dataLabel, dbpath, device, ticker, locationManager, accelerometer, recorder, accelValuesCollected, accelX, accelY, accelZ;
+// Pointers (i.e. UIButton *)
+@synthesize startButton, uploadButton, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView;
 
-// Send a warning to the user
-- (void)warn
-{
-	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_data.php"]];
-	[request setHTTPMethod:@"POST"];
-	
-	NSString *postString = [NSString stringWithFormat:@"password=driving123~"];
-	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
-	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
-	
-	NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-	
-	if(connection)
-	{
-		// NSLog(@"Connection successful.");
-	}
-	else
-	{
-		NSLog(@"Connection failed.");
-	}
-}
+// Low-level types (i.e. int)
+@synthesize accelValuesCollected, accelX, accelY, accelZ, recording, trackingUser;
 
 // Connect to the SQL database
 - (BOOL)sqlcon
 {
-	NSLog(@"Connecting to SQL...");
+	NSLog(@":: Initializing SQL connection.");
 	
+	// Two temporary variables
 	NSArray			*paths;
 	const char		*database;
 	
+	// Get device paths
 	paths		= NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	
+	// Get the path to the database
 	dbpath		= [[NSString alloc] initWithString:[[paths objectAtIndex:0] stringByAppendingPathComponent:@"distracted-driving_v1.1.db"]];
 	
+	// Create the database file if it doesn't exist
 	if([[NSFileManager defaultManager] fileExistsAtPath:dbpath] == NO)
 	{
+		NSLog(@":: Creating database file.");
+		
+		// Create the file
 		NSString *dbpathFromApp = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"distracted-driving_v1.1.db"];
+		
+		// Copy it to the correct location
 		[[NSFileManager defaultManager] copyItemAtPath:dbpathFromApp toPath:dbpath error:nil];
 		
-		NSLog(@"Database file will be created.");
-		
+		// Get the UTF8String of the dbpath to use with sqlite3
 		database = [dbpath UTF8String];
 		
+		// Create the table once the connection is made
 		if(sqlite3_open(database, &db) == SQLITE_OK)
 		{
+			NSLog(@":: Creating table in database.");
+			
 			char *err;
 			const char *sql = "CREATE TABLE IF NOT EXISTS collected_data (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, date DATETIME, accelorometer TEXT, sound TEXT, gps TEXT, compass TEXT, battery TEXT)";
 			
 			if(sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK)
 			{
-				NSLog(@"Table creation failed!");
+				NSLog(@":: Table creation failed!");
 				sqlite3_close(db);
 				return NO;
 			}
@@ -70,7 +64,7 @@
 		}
 		else
 		{
-			NSLog(@"Database connection failed!");
+			NSLog(@":: Database creation failed!");
 			return NO;
 		}
 	}
@@ -78,11 +72,11 @@
 	{
 		database = [dbpath UTF8String];
 		
-		NSLog(@"Database file was found. Path: %@", dbpath);
+		NSLog(@":: Database file already exists; connecting to database.");
 		
 		if(sqlite3_open(database, &db) != SQLITE_OK)
 		{
-			NSLog(@"Database connection failed!");
+			NSLog(@":: Database connection failed!");
 			sqlite3_close(db);
 			return NO;
 		}
@@ -90,19 +84,21 @@
 		sqlite3_close(db);
 	}
 	
+	NSLog(@":: SQL connection succeeded.");
+	
 	return YES;
 }
 
-// Insert a row to SQL
+// Insert a row to local SQL
 - (BOOL)insertRowWithAccelorometer:(NSString *)accelorometer andSound:(NSString *)sound andGps:(NSString *)gps andCompass:(NSString *)compass andBattery:(NSString *)battery
 {
+	NSLog(@":: Inserting a row into the local SQL database.");
+	
 	sqlite3_stmt	*query;
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
 		NSString *nsquery = [NSString stringWithFormat:@"INSERT INTO collected_data (device_id, date, accelorometer, sound, gps, compass, battery) VALUES ('%@', datetime('now'), '%@', '%@', '%@', '%@', '%@')", device, accelorometer, sound, gps, compass, battery];
-		
-		NSLog(@"Querying: %@", nsquery);
 		
 		const char *cquery = [nsquery UTF8String];
 		
@@ -110,7 +106,7 @@
 		
 		if(sqlite3_step(query) != SQLITE_DONE)
 		{
-			NSLog(@"Query failed; %s!", sqlite3_errmsg(db));
+			NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 			sqlite3_finalize(query);
 			sqlite3_close(db);
 			return NO;
@@ -121,9 +117,11 @@
 	}
 	else
 	{
-		NSLog(@"Query failed; %s!", sqlite3_errmsg(db));
+		NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 		return NO;
 	}
+	
+	NSLog(@":: SQL insertion succeeeded.");
 	
 	return YES;
 }
@@ -133,8 +131,6 @@
 	int num = 0;
 	
 	sqlite3_stmt	*query;
-	
-	// NSLog(@"Counting rows.");
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
@@ -158,6 +154,8 @@
 
 - (IBAction)uploadRows:(id)sender
 {
+	NSLog(@":: Uploading local SQL rows to the server.");
+	
 	NSString		*_id;
 	NSString		*_device;
 	NSString		*date;
@@ -205,11 +203,11 @@
 			
 			if(connection)
 			{
-				// NSLog(@"Connection successful.");
+				NSLog(@":: SQL row upload successful.");
 			}
 			else
 			{
-				NSLog(@"Connection failed.");
+				NSLog(@":: SQL row upload failed.");
 			}
 		}
 		
@@ -217,19 +215,19 @@
 		sqlite3_close(db);
 	}
 	else
-		NSLog(@"Query failed; %s!", sqlite3_errmsg(db));
+		NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 	
 	[self emptyTable:sender];
 }
 
 - (void)connection: (NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-	NSLog(@"Received data: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+	// received remote data
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
-	NSLog(@"Finished!");
+	// finished loading remote connection
 }
 
 - (IBAction)emptyTable:(id)sender
@@ -240,15 +238,13 @@
 	{
 		NSString *nsquery = @"DELETE FROM collected_data";
 		
-		// NSLog(@"Executing query.");
-		
 		const char *cquery = [nsquery UTF8String];
 		
 		sqlite3_prepare_v2(db, cquery, -1, &query, NULL);
 		
 		if(sqlite3_step(query) != SQLITE_DONE)
 		{
-			NSLog(@"Query failed; %s!", sqlite3_errmsg(db));
+			NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 			sqlite3_finalize(query);
 			sqlite3_close(db);
 		}
@@ -257,25 +253,239 @@
 		sqlite3_close(db);
 	}
 	else
-		NSLog(@"Query failed; %s!", sqlite3_errmsg(db));
+		NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 	
-	[self updateDataLabel];
+	[self updateData];
 }
 
-- (void)updateDataLabel
+- (BOOL)isValidLocation:(CLLocation *)newLocation
+{
+	if(!newLocation)
+		return NO;
+	
+	// Make sure the new location is valid and accurate within 100 meters
+	if(newLocation.horizontalAccuracy < 0 || newLocation.horizontalAccuracy > 100)
+		return NO;
+	
+	// If this is the first time we've checked for coordinates, set this as the old location and prevent it from being used
+	if(oldLocation == nil)
+	{
+		oldLocation = newLocation;
+		return NO;
+	}
+	
+	// Make sure the new location is really new
+	NSTimeInterval timeInterval = [newLocation.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+	if(timeInterval < 0)
+		return NO;
+	
+	// Make sure the speed is positive, not negative (i.e. invalid)
+	float speed = (float) [newLocation distanceFromLocation:oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+	
+	// Negative speed is invalid; speed over 200 mph is probably wrong too
+	if(speed < 0 || [self mphFromMps:speed] > 200)
+		return NO;
+	
+	return YES;
+}
+
+- (float)mphFromMps:(float)mps
+{
+	// Convert meters per second into miles per hour
+	return mps * 2.23693629;
+}
+
+- (void)centerMapOnLocation:(CLLocation *)location andZoom:(BOOL)zoom
+{
+	MKCoordinateRegion adjustedRegion;
+	
+	if(!zoom)
+	{
+		NSLog(@":: Centering mapView on user location");
+		adjustedRegion = mapView.region;
+		adjustedRegion.center = location.coordinate;
+	}
+	else
+	{
+		NSLog(@":: Centering mapView on user location and zooming in");
+		adjustedRegion = MKCoordinateRegionMakeWithDistance(location.coordinate, 1000, 1000);
+	}
+	
+	trackingUser			= YES;
+	lastCenteredLocation	= location;
+	adjustedRegion			= [mapView regionThatFits:adjustedRegion];
+	
+	[mapView setRegion:adjustedRegion animated:YES];
+}
+
+- (void)centerMapOnLocation:(CLLocation *)location
+{
+	[self centerMapOnLocation:location andZoom:NO];
+}
+
+- (IBAction)centerMap:(id)sender
+{
+	[self centerMapOnLocation:locationManager.location];
+}
+
+- (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation
+{
+	// Check distance not from the last location but from the last centered location	
+	if([self isValidLocation:newLocation])
+	{
+		if(trackingUser)
+			[self centerMapOnLocation:newLocation];
+		else if([newLocation distanceFromLocation:lastCenteredLocation] > 10)
+			trackingUser = YES;
+	}
+}
+
+- (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error
+{
+	NSLog(@":: Location error: %@", error);
+}
+
+// Handle "Mark as Dangerous" button taps
+- (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control
+{
+	NSLog(@":: Requesting that a location be marked as dangerous");
+	
+	NSMutableURLRequest	*request;
+	NSURLConnection		*connection;
+	NSString			*postString, *dateString;
+	
+	// Get the date
+	NSDate				*date		= [NSDate date];
+	NSDateFormatter		*formatter	= [[NSDateFormatter alloc] init];
+	
+	[formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+	dateString = [formatter stringFromDate:date];
+	
+	// Get the annotation coordinate
+	CLLocationCoordinate2D coordinate = view.annotation.coordinate;
+	
+	// Send a request to the server to mark this location as dangerous
+	request		= [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_tag.php"]];
+	postString	= [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f", device, dateString, coordinate.latitude, coordinate.longitude];
+	
+	[request setHTTPMethod:@"POST"];
+	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	
+	connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+	
+	if(connection)
+	{
+		NSLog(@":: Danger tag successful.");
+	}
+	else
+	{
+		NSLog(@":: Danger tag failed.");
+	}
+	
+	// Remove the annotation
+	[mapView removeAnnotation:view.annotation];
+	
+	// Make a new annotation (DangerTag)
+	[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:nil coordinate:coordinate]];
+}
+
+- (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation
+{
+	NSString	*identifier;
+	BOOL		isDangerTag;
+	
+	// Don't change the user location
+	if([annotation isKindOfClass:[MKUserLocation class]])
+		return nil;
+	
+	// Differentiate between MapTags and DangerTags
+	if([annotation isKindOfClass:[MapTag class]])
+	{
+		identifier	= @"maptag";
+		isDangerTag	= NO;
+	}
+	else
+	{
+		identifier	= @"dangertag";
+		isDangerTag	= YES;
+	}
+	
+	MKPinAnnotationView *annotationView	= (MKPinAnnotationView *) [mapView dequeueReusableAnnotationViewWithIdentifier:identifier];
+	
+	if(annotationView == nil)
+		annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
+	else
+		annotationView.annotation = annotation;
+	
+	annotationView.enabled			= YES;
+	annotationView.canShowCallout	= YES;
+	
+	if(isDangerTag)
+	{
+		annotationView.pinColor		= MKPinAnnotationColorRed;
+		annotationView.animatesDrop	= NO;
+	}
+	else
+	{
+		annotationView.pinColor		= MKPinAnnotationColorGreen;
+		annotationView.animatesDrop	= YES;
+		
+		// Add a button to allow users to tag this pin as a dangerous zone
+		UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
+		[annotationView setRightCalloutAccessoryView:btn];
+	}
+	
+	return annotationView;
+}
+
+// Action received when the user taps and holds on the map
+- (void)longTouch:(UIGestureRecognizer *)gestureRecognizer
+{
+	if(gestureRecognizer.state == UIGestureRecognizerStateBegan)
+	{
+		[mapView addAnnotation:[[MapTag alloc] initWithName:@"Mark as Dangerous" address:nil coordinate:[mapView convertPoint:[gestureRecognizer locationInView:mapView] toCoordinateFromView:mapView]]];
+	}
+}
+
+// Action received when the user drags the map
+-(void)panHandler:(UIGestureRecognizer *)gestureRecognizer
+{
+	// If the user pans the screen, stop tracking
+	trackingUser = NO;
+}
+
+- (void)updateData
 {
 	int rows = [self numRows];
 	
 	if(rows > 0)
-		[dataLabel setText:[NSString stringWithFormat:@"You have %i %@ of data to send.", rows, (rows == 1 ? @"row" : @"rows")]];
+		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.1f blue:0.6f alpha:1.0f]];
 	else
-		[dataLabel setText:@"You do not have any recorded data."];
+		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.25f green:0.25f blue:0.25f alpha:1.0f]];
+}
+
+- (void)monitorWhileNotRecording:(id)sender
+{
+	// Detect driving and alert the user to enable recording if not recording
+	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
+	{
+		float speed = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+		
+		// If we're going fast enough to be driving, alert the user
+		if([self mphFromMps:speed] > 20)
+		{
+			NSString	*str	= [NSString stringWithFormat:@"It appears that you are driving (about %d mph).  Please start recording data now.", (int) [self mphFromMps:speed]];
+			UIAlertView	*alert	= [[UIAlertView alloc] initWithTitle:@"Enable Recording" message:str delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+			[alert show];
+		}
+		
+		oldLocation = locationManager.location;
+	}
 }
 
 - (void)record:(id)sender
 {
-	NSLog(@"Tick.");
-	
 	NSString *accel, *sound, *gps, *compass, *battery;
 	
 	// Accelorometer
@@ -298,7 +508,7 @@
 		compass = @"Unknown";
 	
 	// GPS
-	if(((int) locationManager.heading.trueHeading) != 0)
+	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, locationManager.location.speed];
 	else
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: Unknown, Speed: Unknown", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude];
@@ -324,7 +534,7 @@
 		battery = @"Unknown";
 	
 	[self insertRowWithAccelorometer:accel andSound:sound andGps:gps andCompass:compass andBattery:battery];
-	[self updateDataLabel];
+	[self updateData];
 }
 
 - (IBAction)toggleButton:(id)sender
@@ -334,9 +544,14 @@
 	if(startButton.selected)
 	{
 		// Recording
+		recording = YES;
 		
-		// Since we started recording, tell the user we're recording
-		[recordingLabel setText:@"You are recording."];
+		// Update button color to red
+		[startButton setBackgroundColor: [UIColor colorWithRed:0.6f green:0.1f blue:0.1f alpha:1.0f]];
+		
+		// End the non-recording ticker
+		[ticker invalidate];
+		ticker = nil;
 		
 		// Start recording
 		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(record:) userInfo:nil repeats:YES];
@@ -344,19 +559,27 @@
 	else
 	{
 		// Done recording
+		recording = NO;
 		
-		// Tell the user we've stopped recording
-		[recordingLabel setText:@"You are not recording."];
+		// Update button color to green
+		[startButton setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
 		
 		// Update numRows
-		[self updateDataLabel];
+		[self updateData];
 		
 		// Stop recording
 		[ticker invalidate];
 		ticker = nil;
+		
+		// Start non-recording ticker
+		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
 	}
 }
 
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{   
+    return YES;
+}
 
 - (void)didReceiveMemoryWarning
 {
@@ -380,19 +603,42 @@
 	[startButton setTitle:@"Start Recording"	forState:UIControlStateNormal];
 	[startButton setTitle:@"Stop Recording"		forState:UIControlStateSelected];
 	
-	// Set initial label text
-	[recordingLabel setText:@"You are not recording."];
-	[self updateDataLabel];
+	[uploadButton setTitle:@"Upload Data" forState:UIControlStateNormal];
+	
+	// Set button colors
+	[startButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
+	[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.1f blue:0.6f alpha:1.0f]];
+	
+	[self updateData];
 	
 	// Set device ID
 	device = @"Unknown";
 	
+	// Set other variables
+	recording		= NO;
+	trackingUser	= YES;
+	
 	// Set up GPS
 	locationManager					= [[CLLocationManager alloc] init];
+	locationManager.delegate		= self;
 	locationManager.distanceFilter	= kCLDistanceFilterNone;
-	locationManager.desiredAccuracy	= kCLLocationAccuracyHundredMeters;
+	locationManager.desiredAccuracy	= kCLLocationAccuracyNearestTenMeters;
 	[locationManager startUpdatingLocation];
 	[locationManager startUpdatingHeading];
+	
+	oldLocation = nil;
+	
+	// Set up the map view
+	UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouch:)];
+	UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHandler:)];
+	
+	[pan setDelegate:self];
+	
+	[mapView addGestureRecognizer:longPress];
+	[mapView addGestureRecognizer:pan];
+	
+	[mapView setDelegate:self];
+	[self centerMapOnLocation:locationManager.location andZoom:YES];
 	
 	// Set up accelorometer
 	accelerometer					= [UIAccelerometer sharedAccelerometer];
@@ -421,6 +667,9 @@
 		recorder.meteringEnabled = YES;
 		[recorder record];
 	}
+	
+	// Start monitoring ticker
+	ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
 }
 
 - (void)accelerometer:(UIAccelerometer *)a didAccelerate:(UIAcceleration *)acceleration
@@ -435,14 +684,17 @@
 {
     [super viewDidUnload];
     
-	self.startButton		= nil;
-	self.recordingLabel		= nil;
-	self.dataLabel			= nil;
-	self.dbpath				= nil;
-	self.ticker				= nil;
-	self.locationManager	= nil;
-	self.accelerometer		= nil;
-	self.recorder			= nil;
+	self.startButton			= nil;
+	self.uploadButton			= nil;
+	self.dbpath					= nil;
+	self.device					= nil;
+	self.ticker					= nil;
+	self.locationManager		= nil;
+	self.oldLocation			= nil;
+	self.lastCenteredLocation	= nil;
+	self.accelerometer			= nil;
+	self.recorder				= nil;
+	self.mapView				= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated

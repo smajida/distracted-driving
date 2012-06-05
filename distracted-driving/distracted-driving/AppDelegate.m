@@ -26,8 +26,11 @@
     [self.window makeKeyAndVisible];
 	
 	// Register for Push Notifications
-	NSLog(@"Registering for Push Notifications...");
+	NSLog(@":: Registering device for push notifications.");
 	[[UIApplication sharedApplication] registerForRemoteNotificationTypes:(UIRemoteNotificationTypeAlert | UIRemoteNotificationTypeBadge | UIRemoteNotificationTypeSound)];
+	
+	// Prevent iPhone sleeping
+	[UIApplication sharedApplication].idleTimerDisabled = YES;
 	
     return YES;
 }
@@ -43,13 +46,13 @@
 	
 	[self.viewController setDevice:device];
 	
-	NSLog(@"Device ID: %@", device);
+	NSLog(@":: Device ID acquired.");
 }
 
 - (void)application:(UIApplication *)app didFailToRegisterForRemoteNotificationsWithError:(NSError *)err
 {
-	NSString *str = [NSString stringWithFormat: @"Error: %@", err];
-	NSLog(str);
+	// NSString *str = [NSString stringWithFormat: @"Error: %@", err];
+	// NSLog(str);
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
@@ -87,11 +90,11 @@
 	
 	if(connection)
 	{
-		NSLog(@"Connection successful.");
+		NSLog(@":: Requested a push notification from the server.");
 	}
 	else
 	{
-		NSLog(@"Connection failed.");
+		NSLog(@":: Connection to remote server failed.");
 	}
 }
 
