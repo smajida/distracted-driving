@@ -10,6 +10,10 @@
 
 @implementation ViewController
 
+// Settings (Constants)
+int const kMinimumDrivingSpeed = 5;
+
+
 // Pointers (i.e. UIButton *)
 @synthesize startButton, uploadButton, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView;
 
@@ -473,7 +477,7 @@
 		float speed = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
 		
 		// If we're going fast enough to be driving, alert the user
-		if([self mphFromMps:speed] > 20)
+		if([self mphFromMps:speed] > kMinimumDrivingSpeed)
 		{
 			NSString	*str	= [NSString stringWithFormat:@"It appears that you are driving (about %d mph).  Please start recording data now.", (int) [self mphFromMps:speed]];
 			UIAlertView	*alert	= [[UIAlertView alloc] initWithTitle:@"Enable Recording" message:str delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
@@ -498,8 +502,13 @@
 	accelValuesCollected = 0;
 	
 	// Sound
-	[recorder updateMeters];
-	sound = [NSString stringWithFormat:@"%f", [recorder averagePowerForChannel:0]];
+	if(recorder)
+	{
+		[recorder updateMeters];
+		sound = [NSString stringWithFormat:@"%f", [recorder averagePowerForChannel:0]];
+	}
+	else
+		sound = @"Unknown";
 	
 	// Compass
 	if(((int) locationManager.heading.magneticHeading) != 0)
@@ -659,13 +668,17 @@
 	
 	NSError *error;
 	
-	recorder = [[AVAudioRecorder alloc] initWithURL:url settings:settings error:&error];
-	
-	if(recorder)
+	// Don't use the mic if the user is already playing music or listening to something
+	if([[MPMusicPlayerController iPodMusicPlayer] playbackState] != MPMusicPlaybackStatePlaying)
 	{
-		[recorder prepareToRecord];
-		recorder.meteringEnabled = YES;
-		[recorder record];
+		recorder = [[AVAudioRecorder alloc] initWithURL:url settings:settings error:&error];
+		
+		if(recorder)
+		{
+			[recorder prepareToRecord];
+			recorder.meteringEnabled = YES;
+			[recorder record];
+		}
 	}
 	
 	// Start monitoring ticker

@@ -11,8 +11,13 @@
 #import <CoreLocation/CoreLocation.h>
 #import <AVFoundation/AVFoundation.h>
 #import <CoreAudio/CoreAudioTypes.h>
+#import <MediaPlayer/MediaPlayer.h>
 #import <MapKit/MapKit.h>
 #import "MapTag.h"
+
+// Settings (Constants)
+extern int const kMinimumDrivingSpeed;
+
 
 @interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate>
 {

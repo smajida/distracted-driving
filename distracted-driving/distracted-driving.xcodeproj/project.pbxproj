@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A321C3311580FC7300F4DDB2 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A321C3301580FC7300F4DDB2 /* MediaPlayer.framework */; };
 		A321EC9D157E6F65009D2FD8 /* Icon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A321EC9C157E6F65009D2FD8 /* Icon@2x.png */; };
 		A321EC9F157E6F98009D2FD8 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = A321EC9E157E6F98009D2FD8 /* Icon.png */; };
 		A321ECA1157E71BE009D2FD8 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A321ECA0157E71BE009D2FD8 /* Default@2x.png */; };
@@ -44,6 +45,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A321C3301580FC7300F4DDB2 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		A321EC9C157E6F65009D2FD8 /* Icon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Icon@2x.png"; sourceTree = "<group>"; };
 		A321EC9E157E6F98009D2FD8 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		A321ECA0157E71BE009D2FD8 /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A321C3311580FC7300F4DDB2 /* MediaPlayer.framework in Frameworks */,
 				A32F0B6E1577FF900055FF27 /* MapKit.framework in Frameworks */,
 				A32F0B6C1577DEFC0055FF27 /* QuartzCore.framework in Frameworks */,
 				A3BD62261566BC0800CE3DFD /* AVFoundation.framework in Frameworks */,
@@ -133,6 +136,7 @@
 		A3665D841561FAC7000E3AF2 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A321C3301580FC7300F4DDB2 /* MediaPlayer.framework */,
 				A32F0B6D1577FF900055FF27 /* MapKit.framework */,
 				A32F0B6B1577DEFC0055FF27 /* QuartzCore.framework */,
 				A3BD62251566BC0800CE3DFD /* AVFoundation.framework */,
