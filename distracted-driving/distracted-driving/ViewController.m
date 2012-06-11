@@ -11,14 +11,14 @@
 @implementation ViewController
 
 // Settings (Constants)
-int const kMinimumDrivingSpeed = 5;
-
+int const kMinimumDrivingSpeed	= 5;
+int const kDataPointsForAverage	= 3;
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, uploadButton, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView;
+@synthesize startButton, uploadButton, centerButton, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, recording, trackingUser;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser;
 
 // Connect to the SQL database
 - (BOOL)sqlcon
@@ -283,12 +283,25 @@ int const kMinimumDrivingSpeed = 5;
 	if(timeInterval < 0)
 		return NO;
 	
+	/*
 	// Make sure the speed is positive, not negative (i.e. invalid)
-	float speed = (float) [newLocation distanceFromLocation:oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+	speed += (float) [newLocation distanceFromLocation:oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+	speedValuesCollected++;
 	
-	// Negative speed is invalid; speed over 200 mph is probably wrong too
-	if(speed < 0 || [self mphFromMps:speed] > 200)
-		return NO;
+	// Average the speed
+	if(speedValuesCollected >= kDataPointsForAverage)
+	{
+		speed = speed / kDataPointsForAverage;
+		[spedometer setText:[NSString stringWithFormat:@"%d mph", (int) [self mphFromMps:speed]]];
+		
+		// Negative speed is invalid; speed over 200 mph is probably wrong too
+		if(speed < 0 || [self mphFromMps:speed] > 200)
+			return NO;
+		
+		speed = 0.0;
+		speedValuesCollected = 0;
+	}
+	*/
 	
 	return YES;
 }
@@ -474,14 +487,31 @@ int const kMinimumDrivingSpeed = 5;
 	// Detect driving and alert the user to enable recording if not recording
 	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
 	{
-		float speed = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+		float obj = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
 		
-		// If we're going fast enough to be driving, alert the user
-		if([self mphFromMps:speed] > kMinimumDrivingSpeed)
+		if([speedValues count] < kDataPointsForAverage)
+			[speedValues addObject:[NSNumber numberWithFloat:obj]];
+		else
 		{
-			NSString	*str	= [NSString stringWithFormat:@"It appears that you are driving (about %d mph).  Please start recording data now.", (int) [self mphFromMps:speed]];
-			UIAlertView	*alert	= [[UIAlertView alloc] initWithTitle:@"Enable Recording" message:str delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
-			[alert show];
+			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+			[speedValues removeLastObject];
+		}
+		
+		// Average the speed
+		if([speedValues count] == kDataPointsForAverage)
+		{
+			speed = 0.0;
+			for(int i = 0; i < [speedValues count]; i++)
+				speed += [[speedValues objectAtIndex:i] floatValue];
+			speed = speed / [speedValues count];
+			
+			// If we're going fast enough to be driving, alert the user
+			if([self mphFromMps:speed] > kMinimumDrivingSpeed)
+			{
+				NSString	*str	= [NSString stringWithFormat:@"It appears that you are driving (about %d mph).  Please start recording data now.", (int) [self mphFromMps:speed]];
+				UIAlertView	*alert	= [[UIAlertView alloc] initWithTitle:@"Enable Recording" message:str delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+				[alert show];
+			}
 		}
 		
 		oldLocation = locationManager.location;
@@ -609,10 +639,10 @@ int const kMinimumDrivingSpeed = 5;
 	[self sqlcon];
 	
 	// Set button labels
-	[startButton setTitle:@"Start Recording"	forState:UIControlStateNormal];
-	[startButton setTitle:@"Stop Recording"		forState:UIControlStateSelected];
+	[startButton setTitle:@"Record"	forState:UIControlStateNormal];
+	[startButton setTitle:@"Stop"	forState:UIControlStateSelected];
 	
-	[uploadButton setTitle:@"Upload Data" forState:UIControlStateNormal];
+	[uploadButton setTitle:@"Upload" forState:UIControlStateNormal];
 	
 	// Set button colors
 	[startButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
@@ -626,6 +656,9 @@ int const kMinimumDrivingSpeed = 5;
 	// Set other variables
 	recording		= NO;
 	trackingUser	= YES;
+	
+	// Set up speed monitor
+	speedValues = [[NSMutableArray alloc] init];
 	
 	// Set up GPS
 	locationManager					= [[CLLocationManager alloc] init];
@@ -708,6 +741,7 @@ int const kMinimumDrivingSpeed = 5;
 	self.accelerometer			= nil;
 	self.recorder				= nil;
 	self.mapView				= nil;
+	self.speedValues			= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated

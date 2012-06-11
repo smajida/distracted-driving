@@ -25,13 +25,14 @@
 	layer.cornerRadius	= 8.0f;
 	layer.masksToBounds	= YES;
 	layer.borderWidth	= 1.0f;
-	layer.borderColor	= [UIColor colorWithWhite:0.5f alpha:0.2f].CGColor;
+	layer.borderColor	= [UIColor colorWithWhite:0.5f alpha:1.0f].CGColor;
 }
 
 - (void)addShineLayer
 {
 	shineLayer			= [CAGradientLayer layer];
 	shineLayer.frame	= self.layer.bounds;
+	shineLayer.masksToBounds = YES;
 	shineLayer.colors	=	[NSArray arrayWithObjects:
 							(id)[UIColor colorWithWhite:1.0f alpha:0.4f].CGColor,
 							(id)[UIColor colorWithWhite:1.0f alpha:0.2f].CGColor,
@@ -54,12 +55,10 @@
 - (void)addHighlightLayer
 {
 	highlightLayer = [CALayer layer];
-	highlightLayer.backgroundColor = [UIColor colorWithRed:0.25f
-													green:0.25f
-													blue:0.25f
-													alpha:0.75].CGColor;
+	highlightLayer.backgroundColor = [UIColor colorWithRed:0.25f green:0.25f blue:0.25f alpha:0.75f].CGColor;
 	highlightLayer.frame = self.layer.bounds;
 	highlightLayer.hidden = YES;
+	highlightLayer.masksToBounds = YES;
 	[self.layer insertSublayer:highlightLayer below:shineLayer];
 }
 
@@ -79,6 +78,13 @@
 - (void)awakeFromNib
 {
 	[self initLayers];
+}
+
+- (void)layoutSubviews
+{
+	[super layoutSubviews];
+	highlightLayer.frame = self.layer.bounds;
+	shineLayer.frame = self.layer.bounds;
 }
 
 /*

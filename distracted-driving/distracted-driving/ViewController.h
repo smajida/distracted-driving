@@ -14,14 +14,15 @@
 #import <MediaPlayer/MediaPlayer.h>
 #import <MapKit/MapKit.h>
 #import "MapTag.h"
+#import "GradientButton.h"
 
 // Settings (Constants)
 extern int const kMinimumDrivingSpeed;
-
+extern int const kDataPointsForAverage;
 
 @interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate>
 {
-	UIButton			*startButton, *uploadButton;
+	GradientButton		*startButton, *uploadButton, *centerButton;
 	sqlite3				*db;
 	NSTimer				*ticker;
 	NSString			*dbpath;
@@ -31,23 +32,25 @@ extern int const kMinimumDrivingSpeed;
 	UIAccelerometer		*accelerometer;
 	AVAudioRecorder		*recorder;
 	MKMapView			*mapView;
+	NSMutableArray		*speedValues;
 	int					accelValuesCollected;
-	float				accelX, accelY, accelZ;
+	float				accelX, accelY, accelZ, speed;
 	BOOL				recording, trackingUser;
 }
 
-@property (nonatomic, retain) IBOutlet UIButton		*startButton, *uploadButton;
-@property (nonatomic, retain) NSTimer				*ticker;
-@property (nonatomic, retain) NSString				*dbpath;
-@property (nonatomic, retain) NSString				*device;
-@property (nonatomic, retain) CLLocationManager		*locationManager;
-@property (nonatomic, retain) CLLocation			*oldLocation, *lastCenteredLocation;
-@property (nonatomic, retain) UIAccelerometer		*accelerometer;
-@property (nonatomic, retain) AVAudioRecorder		*recorder;
-@property (nonatomic, retain) IBOutlet MKMapView	*mapView;
-@property (nonatomic, assign) int					accelValuesCollected;
-@property (nonatomic, assign) float					accelX, accelY, accelZ;
-@property (nonatomic, assign) BOOL					recording, trackingUser;
+@property (nonatomic, retain) IBOutlet GradientButton	*startButton, *uploadButton, *centerButton;
+@property (nonatomic, retain) NSTimer					*ticker;
+@property (nonatomic, retain) NSString					*dbpath;
+@property (nonatomic, retain) NSString					*device;
+@property (nonatomic, retain) CLLocationManager			*locationManager;
+@property (nonatomic, retain) CLLocation				*oldLocation, *lastCenteredLocation;
+@property (nonatomic, retain) UIAccelerometer			*accelerometer;
+@property (nonatomic, retain) AVAudioRecorder			*recorder;
+@property (nonatomic, retain) IBOutlet MKMapView		*mapView;
+@property (nonatomic, retain) NSMutableArray			*speedValues;
+@property (nonatomic, assign) int						accelValuesCollected;
+@property (nonatomic, assign) float						accelX, accelY, accelZ, speed;
+@property (nonatomic, assign) BOOL						recording, trackingUser;
 
 - (void)setDevice:(NSString *)_device;
 - (BOOL)sqlcon;
@@ -80,5 +83,7 @@ extern int const kMinimumDrivingSpeed;
 - (IBAction)toggleButton:(id)sender;
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
+
+- (void)orientationDidChange;
 
 @end
