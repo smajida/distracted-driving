@@ -12,13 +12,13 @@
 
 // Settings (Constants)
 int const kMinimumDrivingSpeed	= 5;
-int const kDataPointsForAverage	= 3;
+int const kDataPointsForAverage	= 5;
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, uploadButton, centerButton, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
+@synthesize startButton, uploadButton, tagButton, spedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, hasAlertedUser;
 
 // Connect to the SQL database
 - (BOOL)sqlcon
@@ -318,13 +318,13 @@ int const kDataPointsForAverage	= 3;
 	
 	if(!zoom)
 	{
-		NSLog(@":: Centering mapView on user location");
+		// NSLog(@":: Centering mapView on user location");
 		adjustedRegion = mapView.region;
 		adjustedRegion.center = location.coordinate;
 	}
 	else
 	{
-		NSLog(@":: Centering mapView on user location and zooming in");
+		// NSLog(@":: Centering mapView on user location and zooming in");
 		adjustedRegion = MKCoordinateRegionMakeWithDistance(location.coordinate, 1000, 1000);
 	}
 	
@@ -340,7 +340,7 @@ int const kDataPointsForAverage	= 3;
 	[self centerMapOnLocation:location andZoom:NO];
 }
 
-- (IBAction)centerMap:(id)sender
+- (void)centerMap
 {
 	[self centerMapOnLocation:locationManager.location];
 }
@@ -410,17 +410,17 @@ int const kDataPointsForAverage	= 3;
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation
 {
 	NSString	*identifier;
-	BOOL		isDangerTag;
+	BOOL		isDangerTag = NO, isUserLocation = NO;
 	
-	// Don't change the user location
+	// Differentiate between user location, MapTags and DangerTags
 	if([annotation isKindOfClass:[MKUserLocation class]])
-		return nil;
-	
-	// Differentiate between MapTags and DangerTags
-	if([annotation isKindOfClass:[MapTag class]])
+	{
+		identifier		= @"userlocation";
+		isUserLocation	= YES;
+	}
+	else if([annotation isKindOfClass:[MapTag class]])
 	{
 		identifier	= @"maptag";
-		isDangerTag	= NO;
 	}
 	else
 	{
@@ -428,25 +428,40 @@ int const kDataPointsForAverage	= 3;
 		isDangerTag	= YES;
 	}
 	
-	MKPinAnnotationView *annotationView	= (MKPinAnnotationView *) [mapView dequeueReusableAnnotationViewWithIdentifier:identifier];
+	MKPinAnnotationView *annotationView;
 	
-	if(annotationView == nil)
-		annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
-	else
-		annotationView.annotation = annotation;
-	
-	annotationView.enabled			= YES;
-	annotationView.canShowCallout	= YES;
-	
-	if(isDangerTag)
+	if(!isUserLocation)
 	{
-		annotationView.pinColor		= MKPinAnnotationColorRed;
-		annotationView.animatesDrop	= NO;
+		annotationView = (MKPinAnnotationView *) [mapView dequeueReusableAnnotationViewWithIdentifier:identifier];
+		
+		if(annotationView == nil)
+			annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
+		else
+			annotationView.annotation = annotation;
+		
+		annotationView.enabled			= YES;
+		annotationView.canShowCallout	= YES;
+		
+		if(isDangerTag)
+		{
+			annotationView.pinColor		= MKPinAnnotationColorRed;
+			annotationView.animatesDrop	= NO;
+		}
+		else
+		{
+			annotationView.pinColor		= MKPinAnnotationColorGreen;
+			annotationView.animatesDrop	= YES;
+			
+			// Add a button to allow users to tag this pin as a dangerous zone
+			UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
+			[annotationView setRightCalloutAccessoryView:btn];
+		}
 	}
 	else
 	{
-		annotationView.pinColor		= MKPinAnnotationColorGreen;
-		annotationView.animatesDrop	= YES;
+		// User location
+		annotationView = (MKPinAnnotationView *) [mapView viewForAnnotation:annotation];
+		annotationView.annotation = annotation;
 		
 		// Add a button to allow users to tag this pin as a dangerous zone
 		UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
@@ -505,12 +520,17 @@ int const kDataPointsForAverage	= 3;
 				speed += [[speedValues objectAtIndex:i] floatValue];
 			speed = speed / [speedValues count];
 			
+			// Display speed
+			[spedometer setText:[NSString stringWithFormat:@"%d mph", (int) [self mphFromMps:speed]]];
+			
 			// If we're going fast enough to be driving, alert the user
-			if([self mphFromMps:speed] > kMinimumDrivingSpeed)
+			if([self mphFromMps:speed] > kMinimumDrivingSpeed && !hasAlertedUser)
 			{
 				NSString	*str	= [NSString stringWithFormat:@"It appears that you are driving (about %d mph).  Please start recording data now.", (int) [self mphFromMps:speed]];
 				UIAlertView	*alert	= [[UIAlertView alloc] initWithTitle:@"Enable Recording" message:str delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
 				[alert show];
+				
+				hasAlertedUser = YES;
 			}
 		}
 		
@@ -532,7 +552,7 @@ int const kDataPointsForAverage	= 3;
 	accelValuesCollected = 0;
 	
 	// Sound
-	if(recorder)
+	if(recorder && [recorder isRecording])
 	{
 		[recorder updateMeters];
 		sound = [NSString stringWithFormat:@"%f", [recorder averagePowerForChannel:0]];
@@ -574,6 +594,34 @@ int const kDataPointsForAverage	= 3;
 	
 	[self insertRowWithAccelorometer:accel andSound:sound andGps:gps andCompass:compass andBattery:battery];
 	[self updateData];
+	
+	// Speed
+	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
+	{
+		float obj = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
+		
+		if([speedValues count] < kDataPointsForAverage)
+			[speedValues addObject:[NSNumber numberWithFloat:obj]];
+		else
+		{
+			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+			[speedValues removeLastObject];
+		}
+		
+		// Average the speed
+		if([speedValues count] == kDataPointsForAverage)
+		{
+			speed = 0.0;
+			for(int i = 0; i < [speedValues count]; i++)
+				speed += [[speedValues objectAtIndex:i] floatValue];
+			speed = speed / [speedValues count];
+			
+			// Display speed
+			[spedometer setText:[NSString stringWithFormat:@"%d mph", (int) [self mphFromMps:speed]]];
+		}
+		
+		oldLocation = locationManager.location;
+	}
 }
 
 - (IBAction)toggleButton:(id)sender
@@ -613,6 +661,15 @@ int const kDataPointsForAverage	= 3;
 		// Start non-recording ticker
 		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
 	}
+}
+
+- (IBAction)tagButtonWasTouched:(id)sender
+{
+	// Center the map first
+	[self centerMap];
+	
+	// Make a callout
+	
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
@@ -656,6 +713,7 @@ int const kDataPointsForAverage	= 3;
 	// Set other variables
 	recording		= NO;
 	trackingUser	= YES;
+	hasAlertedUser	= NO;
 	
 	// Set up speed monitor
 	speedValues = [[NSMutableArray alloc] init];
@@ -664,7 +722,7 @@ int const kDataPointsForAverage	= 3;
 	locationManager					= [[CLLocationManager alloc] init];
 	locationManager.delegate		= self;
 	locationManager.distanceFilter	= kCLDistanceFilterNone;
-	locationManager.desiredAccuracy	= kCLLocationAccuracyNearestTenMeters;
+	locationManager.desiredAccuracy	= kCLLocationAccuracyHundredMeters;
 	[locationManager startUpdatingLocation];
 	[locationManager startUpdatingHeading];
 	
@@ -678,15 +736,14 @@ int const kDataPointsForAverage	= 3;
 	
 	[mapView addGestureRecognizer:longPress];
 	[mapView addGestureRecognizer:pan];
-	
 	[mapView setDelegate:self];
+	
 	[self centerMapOnLocation:locationManager.location andZoom:YES];
 	
 	// Set up accelorometer
 	accelerometer					= [UIAccelerometer sharedAccelerometer];
 	accelerometer.delegate			= (id) self;
 	accelerometer.updateInterval	= 0.1;
-	
 	accelX = accelY = accelZ		= 0.0;
 	accelValuesCollected			= 0;
 	
@@ -702,10 +759,17 @@ int const kDataPointsForAverage	= 3;
 	NSError *error;
 	
 	// Don't use the mic if the user is already playing music or listening to something
-	if([[MPMusicPlayerController iPodMusicPlayer] playbackState] != MPMusicPlaybackStatePlaying)
+	[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:&error];
+	[[AVAudioSession sharedInstance] setActive:YES error:&error];
+	
+	UInt32 otherAudio;
+	UInt32 size = sizeof(otherAudio);
+	AudioSessionGetProperty(kAudioSessionProperty_OtherAudioIsPlaying, &size, &otherAudio);
+	
+	recorder = [[AVAudioRecorder alloc] initWithURL:url settings:settings error:&error];
+	
+	if(!otherAudio)
 	{
-		recorder = [[AVAudioRecorder alloc] initWithURL:url settings:settings error:&error];
-		
 		if(recorder)
 		{
 			[recorder prepareToRecord];
@@ -732,6 +796,8 @@ int const kDataPointsForAverage	= 3;
     
 	self.startButton			= nil;
 	self.uploadButton			= nil;
+	self.tagButton				= nil;
+	self.spedometer				= nil;
 	self.dbpath					= nil;
 	self.device					= nil;
 	self.ticker					= nil;

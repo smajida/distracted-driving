@@ -10,6 +10,7 @@
 #import <sqlite3.h>
 #import <CoreLocation/CoreLocation.h>
 #import <AVFoundation/AVFoundation.h>
+#import <AudioToolbox/AudioToolbox.h>
 #import <CoreAudio/CoreAudioTypes.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <MapKit/MapKit.h>
@@ -22,7 +23,8 @@ extern int const kDataPointsForAverage;
 
 @interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate>
 {
-	GradientButton		*startButton, *uploadButton, *centerButton;
+	GradientButton		*startButton, *uploadButton, *tagButton;
+	UILabel				*spedometer;
 	sqlite3				*db;
 	NSTimer				*ticker;
 	NSString			*dbpath;
@@ -35,10 +37,11 @@ extern int const kDataPointsForAverage;
 	NSMutableArray		*speedValues;
 	int					accelValuesCollected;
 	float				accelX, accelY, accelZ, speed;
-	BOOL				recording, trackingUser;
+	BOOL				recording, trackingUser, hasAlertedUser;
 }
 
-@property (nonatomic, retain) IBOutlet GradientButton	*startButton, *uploadButton, *centerButton;
+@property (nonatomic, retain) IBOutlet GradientButton	*startButton, *uploadButton, *tagButton;
+@property (nonatomic, retain) IBOutlet UILabel			*spedometer;
 @property (nonatomic, retain) NSTimer					*ticker;
 @property (nonatomic, retain) NSString					*dbpath;
 @property (nonatomic, retain) NSString					*device;
@@ -50,7 +53,7 @@ extern int const kDataPointsForAverage;
 @property (nonatomic, retain) NSMutableArray			*speedValues;
 @property (nonatomic, assign) int						accelValuesCollected;
 @property (nonatomic, assign) float						accelX, accelY, accelZ, speed;
-@property (nonatomic, assign) BOOL						recording, trackingUser;
+@property (nonatomic, assign) BOOL						recording, trackingUser, hasAlertedUser;
 
 - (void)setDevice:(NSString *)_device;
 - (BOOL)sqlcon;
@@ -65,7 +68,7 @@ extern int const kDataPointsForAverage;
 
 - (void)centerMapOnLocation:(CLLocation *)location andZoom:(BOOL)zoom;
 - (void)centerMapOnLocation:(CLLocation *)location;
-- (IBAction)centerMap:(id)sender;
+- (void)centerMap;
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error;
@@ -81,9 +84,8 @@ extern int const kDataPointsForAverage;
 - (void)record:(id)sender;
 
 - (IBAction)toggleButton:(id)sender;
+- (IBAction)tagButtonWasTouched:(id)sender;
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
-
-- (void)orientationDidChange;
 
 @end
