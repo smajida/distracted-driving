@@ -18,13 +18,14 @@
 #import "GradientButton.h"
 
 // Settings (Constants)
-extern int const kMinimumDrivingSpeed;
-extern int const kDataPointsForAverage;
+extern int const	kMinimumDrivingSpeed;
+extern int const	kDataPointsForAverage;
+extern double const kMapSpanDelta;
 
 @interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate>
 {
 	GradientButton		*startButton, *uploadButton, *tagButton;
-	UILabel				*spedometer;
+	UILabel				*speedometer;
 	sqlite3				*db;
 	NSTimer				*ticker;
 	NSString			*dbpath;
@@ -41,7 +42,7 @@ extern int const kDataPointsForAverage;
 }
 
 @property (nonatomic, retain) IBOutlet GradientButton	*startButton, *uploadButton, *tagButton;
-@property (nonatomic, retain) IBOutlet UILabel			*spedometer;
+@property (nonatomic, retain) IBOutlet UILabel			*speedometer;
 @property (nonatomic, retain) NSTimer					*ticker;
 @property (nonatomic, retain) NSString					*dbpath;
 @property (nonatomic, retain) NSString					*device;
@@ -55,37 +56,39 @@ extern int const kDataPointsForAverage;
 @property (nonatomic, assign) float						accelX, accelY, accelZ, speed;
 @property (nonatomic, assign) BOOL						recording, trackingUser, hasAlertedUser;
 
-- (void)setDevice:(NSString *)_device;
+// Initializing functions
 - (BOOL)sqlcon;
 
+// Variable manipulation functions
+- (void)calculateSpeed;
+- (float)mphFromMps:(float)mps;
+- (float)mpsFromMph:(float)mph;
+
+// Data management functions
 - (BOOL)insertRowWithAccelorometer:(NSString *)accelorometer andSound:(NSString *)sound andGps:(NSString *)gps andCompass:(NSString *)compass andBattery:(NSString *)battery;
 - (int)numRows;
-- (IBAction)uploadRows:(id)sender;
-- (IBAction)emptyTable:(id)sender;
+- (void)uploadRows;
+- (void)emptyTable;
+- (void)updateData;
 
+// Location functions
 - (BOOL)isValidLocation:(CLLocation *)newLocation;
-- (float)mphFromMps:(float)mps;
-
-- (void)centerMapOnLocation:(CLLocation *)location andZoom:(BOOL)zoom;
 - (void)centerMapOnLocation:(CLLocation *)location;
-- (void)centerMap;
-
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
-- (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error;
-
+- (void)mapView:(MKMapView *)_mapView didUpdateUserLocation:(MKUserLocation *)userLocation;
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control;
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation;
 
-- (void)longTouch:(UIGestureRecognizer *)gestureRecognizer;
-- (void)panHandler:(UIGestureRecognizer *)gestureRecognizer;
+// Input receiving functions
+- (void)longTouchHappened:(UIGestureRecognizer *)gestureRecognizer;
+- (void)panHappened:(UIGestureRecognizer *)gestureRecognizer;
+- (IBAction)startButtonWasTouched:(id)sender;
+- (IBAction)tagButtonWasTouched:(id)sender;
+- (IBAction)uploadButtonWasTouched:(id)sender;
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
-- (void)updateData;
+// Ticking functions
 - (void)monitorWhileNotRecording:(id)sender;
 - (void)record:(id)sender;
-
-- (IBAction)toggleButton:(id)sender;
-- (IBAction)tagButtonWasTouched:(id)sender;
-
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
 @end

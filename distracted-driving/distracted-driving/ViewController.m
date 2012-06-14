@@ -11,20 +11,23 @@
 @implementation ViewController
 
 // Settings (Constants)
-int const kMinimumDrivingSpeed	= 5;
-int const kDataPointsForAverage	= 5;
+int const		kMinimumDrivingSpeed	= 5;
+int const		kDataPointsForAverage	= 5;
+double const	kMapSpanDelta			= 0.005;
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, uploadButton, tagButton, spedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
+@synthesize startButton, uploadButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
 
 // Low-level types (i.e. int)
 @synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, hasAlertedUser;
 
+/**************************
+ * Initializing functions *
+ **************************/
+
 // Connect to the SQL database
 - (BOOL)sqlcon
 {
-	NSLog(@":: Initializing SQL connection.");
-	
 	// Two temporary variables
 	NSArray			*paths;
 	const char		*database;
@@ -38,8 +41,6 @@ int const kDataPointsForAverage	= 5;
 	// Create the database file if it doesn't exist
 	if([[NSFileManager defaultManager] fileExistsAtPath:dbpath] == NO)
 	{
-		NSLog(@":: Creating database file.");
-		
 		// Create the file
 		NSString *dbpathFromApp = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"distracted-driving_v1.1.db"];
 		
@@ -52,8 +53,6 @@ int const kDataPointsForAverage	= 5;
 		// Create the table once the connection is made
 		if(sqlite3_open(database, &db) == SQLITE_OK)
 		{
-			NSLog(@":: Creating table in database.");
-			
 			char *err;
 			const char *sql = "CREATE TABLE IF NOT EXISTS collected_data (id INTEGER PRIMARY KEY AUTOINCREMENT, device_id TEXT, date DATETIME, accelorometer TEXT, sound TEXT, gps TEXT, compass TEXT, battery TEXT)";
 			
@@ -76,11 +75,8 @@ int const kDataPointsForAverage	= 5;
 	{
 		database = [dbpath UTF8String];
 		
-		NSLog(@":: Database file already exists; connecting to database.");
-		
 		if(sqlite3_open(database, &db) != SQLITE_OK)
 		{
-			NSLog(@":: Database connection failed!");
 			sqlite3_close(db);
 			return NO;
 		}
@@ -88,17 +84,102 @@ int const kDataPointsForAverage	= 5;
 		sqlite3_close(db);
 	}
 	
-	NSLog(@":: SQL connection succeeded.");
+	NSLog(@":: Connected to SQL.");
 	
 	return YES;
 }
 
+/***********************************
+ * Variable manipulation functions *
+ ***********************************/
+
+// Calculates the current speed based on a number of data points
+- (void)calculateSpeed
+{
+	// Temporary variables
+	float averageSpeed = 0.0, highestSpeed = 0.0, lowestSpeed = 0.0;
+	NSString *foo;
+	
+	// Get average, lowest, and highest speeds for the data points
+	for(int i = 0; i < [speedValues count]; i++)
+	{
+		averageSpeed += [[speedValues objectAtIndex:i] floatValue];
+		
+		if(i == 0)
+			highestSpeed = lowestSpeed = [[speedValues objectAtIndex:i] floatValue];
+		
+		if(highestSpeed < [[speedValues objectAtIndex:i] floatValue])
+			highestSpeed = [[speedValues objectAtIndex:i] floatValue];
+		
+		if(lowestSpeed > [[speedValues objectAtIndex:i] floatValue])
+			lowestSpeed = [[speedValues objectAtIndex:i] floatValue];
+	}
+	
+	averageSpeed = averageSpeed / [speedValues count];
+	
+	// Standard procedure with a good number of data points
+	if([speedValues count] == kDataPointsForAverage)
+	{
+		// Convert all to MPH
+		averageSpeed	= [self mphFromMps:averageSpeed];
+		highestSpeed	= [self mphFromMps:highestSpeed];
+		lowestSpeed		= [self mphFromMps:lowestSpeed];
+		
+		// Now, compare the determined values to see if the variation makes sense
+		if((highestSpeed - lowestSpeed) > 5)
+		{
+			// Variation is greater than 5mph between the highest and lowest speeds, so check the average
+			if((highestSpeed - averageSpeed) > 5 || (averageSpeed - lowestSpeed) > 5)
+			{
+				// Variation is very high, probably due to acceleration; average the last two points
+				foo = [NSString stringWithFormat:@"High variation. (A: %d, H: %d, L: %d)", (int) averageSpeed, (int) highestSpeed, (int) lowestSpeed];\
+				speed = [self mpsFromMph:([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue])/2];
+			}
+			else
+			{
+				// Variation is moderate (high between peaks and valleys, but low overall); the average should be used
+				foo = [NSString stringWithFormat:@"Moderate variation. (A: %d, H: %d, L: %d)", (int) averageSpeed, (int) highestSpeed, (int) lowestSpeed];
+				speed = [self mpsFromMph:averageSpeed];
+			}
+		}
+		else
+		{
+			// Variation is low; the last point is good enough on its own
+			foo = [NSString stringWithFormat:@"Low variation. (A: %d, H: %d, L: %d)", (int) averageSpeed, (int) highestSpeed, (int) lowestSpeed];
+			speed = [self mpsFromMph:[[speedValues objectAtIndex:0] floatValue]];
+		}
+	}
+	else
+	{
+		// With fewer points, we'll just average them and hope for the best
+		speed = averageSpeed;
+		foo = @"not enough points";
+	}
+	
+	[speedometer setText:[NSString stringWithFormat:@"%d mph\n%@", (int) [self mphFromMps:speed], foo]];
+}
+
+// Convert meters per second into miles per hour
+- (float)mphFromMps:(float)mps
+{
+	return mps * 2.23693629;
+}
+
+// Convert miles per hour into meters per second
+- (float)mpsFromMph:(float)mph
+{
+	return mph / 2.23693629;
+}
+
+/*****************************
+ * Data management functions *
+ *****************************/
+
 // Insert a row to local SQL
 - (BOOL)insertRowWithAccelorometer:(NSString *)accelorometer andSound:(NSString *)sound andGps:(NSString *)gps andCompass:(NSString *)compass andBattery:(NSString *)battery
 {
-	NSLog(@":: Inserting a row into the local SQL database.");
-	
-	sqlite3_stmt	*query;
+	// Temporary variable
+	sqlite3_stmt *query;
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
@@ -125,16 +206,19 @@ int const kDataPointsForAverage	= 5;
 		return NO;
 	}
 	
-	NSLog(@":: SQL insertion succeeeded.");
+	NSLog(@":: Local SQL table added a row.");
 	
 	return YES;
 }
 
+// Get the number of rows in the local database
 - (int)numRows
 {
+	// The number of rows
 	int num = 0;
 	
-	sqlite3_stmt	*query;
+	// Temprary variable
+	sqlite3_stmt *query;
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
@@ -156,23 +240,21 @@ int const kDataPointsForAverage	= 5;
 	return num;
 }
 
-- (IBAction)uploadRows:(id)sender
+// Upload rows from the local database to the remote server
+- (void)uploadRows
 {
-	NSLog(@":: Uploading local SQL rows to the server.");
-	
-	NSString		*_id;
-	NSString		*_device;
-	NSString		*date;
-	NSString		*accelorometer;
-	NSString		*sound;
-	NSString		*gps;
-	NSString		*compass;
-	NSString		*battery;
-	
+	// Temporary variables
+	NSString			*_id;
+	NSString			*_device;
+	NSString			*date;
+	NSString			*accelorometer;
+	NSString			*sound;
+	NSString			*gps;
+	NSString			*compass;
+	NSString			*battery;
 	NSMutableURLRequest	*request;
 	NSURLConnection		*connection;
-	
-	sqlite3_stmt	*query;
+	sqlite3_stmt		*query;
 	
 	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 	{
@@ -192,7 +274,6 @@ int const kDataPointsForAverage	= 5;
 			gps				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 5)];
 			compass			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 6)];
 			battery			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 7)];
-			
 			request			= [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_data.php"]];
 			
 			[request setHTTPMethod:@"POST"];
@@ -207,7 +288,7 @@ int const kDataPointsForAverage	= 5;
 			
 			if(connection)
 			{
-				NSLog(@":: SQL row upload successful.");
+				// NSLog(@":: SQL row upload successful.");
 			}
 			else
 			{
@@ -221,20 +302,12 @@ int const kDataPointsForAverage	= 5;
 	else
 		NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 	
-	[self emptyTable:sender];
+	// Empty the table now that the rows have been uploaded
+	[self emptyTable];
 }
 
-- (void)connection: (NSURLConnection *)connection didReceiveData:(NSData *)data
-{
-	// received remote data
-}
-
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection
-{
-	// finished loading remote connection
-}
-
-- (IBAction)emptyTable:(id)sender
+// Delete all entries in the local database
+- (void)emptyTable
 {
 	sqlite3_stmt *query;
 	
@@ -262,111 +335,84 @@ int const kDataPointsForAverage	= 5;
 	[self updateData];
 }
 
+// Update the upload button -- blue when there is data to send, gray when there is no data to send
+- (void)updateData
+{
+	int rows = [self numRows];
+	
+	if(rows > 0)
+		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.1f blue:0.6f alpha:1.0f]];
+	else
+		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.25f green:0.25f blue:0.25f alpha:1.0f]];
+}
+
+/**********************
+ * Location functions *
+ **********************/
+
+// Validates a given location, throwing out bad values (i.e. nil or a location with bad accuracy or old timestamp)
 - (BOOL)isValidLocation:(CLLocation *)newLocation
 {
+	// Throw out nil
 	if(!newLocation)
 		return NO;
 	
-	// Make sure the new location is valid and accurate within 100 meters
+	// Throw out locations with invalid or imprecise accuracy values
 	if(newLocation.horizontalAccuracy < 0 || newLocation.horizontalAccuracy > 100)
 		return NO;
 	
-	// If this is the first time we've checked for coordinates, set this as the old location and prevent it from being used
+	// Throw out the first location sent to this function
 	if(oldLocation == nil)
 	{
 		oldLocation = newLocation;
 		return NO;
 	}
 	
-	// Make sure the new location is really new
+	// Throw out locations with timestamps older than the old location
 	NSTimeInterval timeInterval = [newLocation.timestamp timeIntervalSinceDate:oldLocation.timestamp];
 	if(timeInterval < 0)
 		return NO;
 	
-	/*
-	// Make sure the speed is positive, not negative (i.e. invalid)
-	speed += (float) [newLocation distanceFromLocation:oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:oldLocation.timestamp];
-	speedValuesCollected++;
-	
-	// Average the speed
-	if(speedValuesCollected >= kDataPointsForAverage)
-	{
-		speed = speed / kDataPointsForAverage;
-		[spedometer setText:[NSString stringWithFormat:@"%d mph", (int) [self mphFromMps:speed]]];
-		
-		// Negative speed is invalid; speed over 200 mph is probably wrong too
-		if(speed < 0 || [self mphFromMps:speed] > 200)
-			return NO;
-		
-		speed = 0.0;
-		speedValuesCollected = 0;
-	}
-	*/
-	
+	// This is a valid location
 	return YES;
 }
 
-- (float)mphFromMps:(float)mps
-{
-	// Convert meters per second into miles per hour
-	return mps * 2.23693629;
-}
-
-- (void)centerMapOnLocation:(CLLocation *)location andZoom:(BOOL)zoom
-{
-	MKCoordinateRegion adjustedRegion;
-	
-	if(!zoom)
-	{
-		// NSLog(@":: Centering mapView on user location");
-		adjustedRegion = mapView.region;
-		adjustedRegion.center = location.coordinate;
-	}
-	else
-	{
-		// NSLog(@":: Centering mapView on user location and zooming in");
-		adjustedRegion = MKCoordinateRegionMakeWithDistance(location.coordinate, 1000, 1000);
-	}
-	
-	trackingUser			= YES;
-	lastCenteredLocation	= location;
-	adjustedRegion			= [mapView regionThatFits:adjustedRegion];
-	
-	[mapView setRegion:adjustedRegion animated:YES];
-}
-
+// Shortcut to the automatic centering function
 - (void)centerMapOnLocation:(CLLocation *)location
 {
-	[self centerMapOnLocation:location andZoom:NO];
+	// Temporary variables
+	MKCoordinateRegion		region;
+	MKCoordinateSpan		span;
+	
+	// Set the span
+	span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
+	
+	// Set up the region
+	region.span		= span;
+	region.center	= location.coordinate;
+	
+	// Set the map view
+	[mapView setRegion:region animated:YES];
 }
 
-- (void)centerMap
-{
-	[self centerMapOnLocation:locationManager.location];
-}
-
+// Start following the user if they move far enough
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation
 {
-	// Check distance not from the last location but from the last centered location	
-	if([self isValidLocation:newLocation])
-	{
-		if(trackingUser)
-			[self centerMapOnLocation:newLocation];
-		else if([newLocation distanceFromLocation:lastCenteredLocation] > 10)
-			trackingUser = YES;
-	}
+	// Check distance not from the last location but from the last centered location
+	if(!trackingUser && [self isValidLocation:newLocation] && [newLocation distanceFromLocation:lastCenteredLocation] > 100)
+		trackingUser = YES;
 }
 
-- (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error
+// Follow the user's location if tracking is enabled
+- (void)mapView:(MKMapView *)_mapView didUpdateUserLocation:(MKUserLocation *)userLocation
 {
-	NSLog(@":: Location error: %@", error);
+	if(trackingUser)
+		[self centerMapOnLocation:(CLLocation *)userLocation];
 }
 
-// Handle "Mark as Dangerous" button taps
+// Handle callout button touches
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control
 {
-	NSLog(@":: Requesting that a location be marked as dangerous");
-	
 	NSMutableURLRequest	*request;
 	NSURLConnection		*connection;
 	NSString			*postString, *dateString;
@@ -407,6 +453,7 @@ int const kDataPointsForAverage	= 5;
 	[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:nil coordinate:coordinate]];
 }
 
+// Handle annotations
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation
 {
 	NSString	*identifier;
@@ -471,32 +518,96 @@ int const kDataPointsForAverage	= 5;
 	return annotationView;
 }
 
+/*****************************
+ * Input receiving functions *
+ *****************************/
+
 // Action received when the user taps and holds on the map
-- (void)longTouch:(UIGestureRecognizer *)gestureRecognizer
+- (void)longTouchHappened:(UIGestureRecognizer *)gestureRecognizer
 {
 	if(gestureRecognizer.state == UIGestureRecognizerStateBegan)
 	{
+		// Drop a pin at that location
 		[mapView addAnnotation:[[MapTag alloc] initWithName:@"Mark as Dangerous" address:nil coordinate:[mapView convertPoint:[gestureRecognizer locationInView:mapView] toCoordinateFromView:mapView]]];
 	}
 }
 
 // Action received when the user drags the map
--(void)panHandler:(UIGestureRecognizer *)gestureRecognizer
+-(void)panHappened:(UIGestureRecognizer *)gestureRecognizer
 {
 	// If the user pans the screen, stop tracking
 	trackingUser = NO;
 }
 
-- (void)updateData
+// Action received when the start/stop button is touched
+- (IBAction)startButtonWasTouched:(id)sender
 {
-	int rows = [self numRows];
+	startButton.selected = !startButton.selected;
 	
-	if(rows > 0)
-		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.1f blue:0.6f alpha:1.0f]];
+	if(startButton.selected)
+	{
+		// Recording
+		recording = YES;
+		
+		// Update button color to red
+		[startButton setBackgroundColor: [UIColor colorWithRed:0.6f green:0.1f blue:0.1f alpha:1.0f]];
+		
+		// End the non-recording ticker
+		[ticker invalidate];
+		ticker = nil;
+		
+		// Start recording
+		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(record:) userInfo:nil repeats:YES];
+	}
 	else
-		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.25f green:0.25f blue:0.25f alpha:1.0f]];
+	{
+		// Done recording
+		recording = NO;
+		
+		// Update button color to green
+		[startButton setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
+		
+		// Update numRows
+		[self updateData];
+		
+		// Stop recording
+		[ticker invalidate];
+		ticker = nil;
+		
+		// Start non-recording ticker
+		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
+	}
 }
 
+// Action received when the tag button is touched
+- (IBAction)tagButtonWasTouched:(id)sender
+{
+	// Center the map first
+	[self centerMapOnLocation:locationManager.location];
+	
+	// Make a callout
+	
+}
+
+// Action received when the upload button is touched
+- (IBAction)uploadButtonWasTouched:(id)sender
+{
+	// Upload rows, if there are rows to upload
+	if([self numRows] > 0)
+		[self uploadRows];
+}
+
+// Enable gesture recognition
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{   
+    return YES;
+}
+
+/*********************
+ * Ticking functions *
+ *********************/
+
+// The tick when not recording data
 - (void)monitorWhileNotRecording:(id)sender
 {
 	// Detect driving and alert the user to enable recording if not recording
@@ -513,31 +624,13 @@ int const kDataPointsForAverage	= 5;
 		}
 		
 		// Average the speed
-		if([speedValues count] == kDataPointsForAverage)
-		{
-			speed = 0.0;
-			for(int i = 0; i < [speedValues count]; i++)
-				speed += [[speedValues objectAtIndex:i] floatValue];
-			speed = speed / [speedValues count];
-			
-			// Display speed
-			[spedometer setText:[NSString stringWithFormat:@"%d mph", (int) [self mphFromMps:speed]]];
-			
-			// If we're going fast enough to be driving, alert the user
-			if([self mphFromMps:speed] > kMinimumDrivingSpeed && !hasAlertedUser)
-			{
-				NSString	*str	= [NSString stringWithFormat:@"It appears that you are driving (about %d mph).  Please start recording data now.", (int) [self mphFromMps:speed]];
-				UIAlertView	*alert	= [[UIAlertView alloc] initWithTitle:@"Enable Recording" message:str delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
-				[alert show];
-				
-				hasAlertedUser = YES;
-			}
-		}
+		[self calculateSpeed];
 		
 		oldLocation = locationManager.location;
 	}
 }
 
+// The tick when recording data
 - (void)record:(id)sender
 {
 	NSString *accel, *sound, *gps, *compass, *battery;
@@ -609,73 +702,28 @@ int const kDataPointsForAverage	= 5;
 		}
 		
 		// Average the speed
-		if([speedValues count] == kDataPointsForAverage)
-		{
-			speed = 0.0;
-			for(int i = 0; i < [speedValues count]; i++)
-				speed += [[speedValues objectAtIndex:i] floatValue];
-			speed = speed / [speedValues count];
-			
-			// Display speed
-			[spedometer setText:[NSString stringWithFormat:@"%d mph", (int) [self mphFromMps:speed]]];
-		}
+		[self calculateSpeed];
 		
 		oldLocation = locationManager.location;
 	}
 }
 
-- (IBAction)toggleButton:(id)sender
+/********************
+ * Sensor functions *
+ ********************/
+
+// Collect accelorometer data
+- (void)accelerometer:(UIAccelerometer *)a didAccelerate:(UIAcceleration *)acceleration
 {
-	startButton.selected = !startButton.selected;
-	
-	if(startButton.selected)
-	{
-		// Recording
-		recording = YES;
-		
-		// Update button color to red
-		[startButton setBackgroundColor: [UIColor colorWithRed:0.6f green:0.1f blue:0.1f alpha:1.0f]];
-		
-		// End the non-recording ticker
-		[ticker invalidate];
-		ticker = nil;
-		
-		// Start recording
-		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(record:) userInfo:nil repeats:YES];
-	}
-	else
-	{
-		// Done recording
-		recording = NO;
-		
-		// Update button color to green
-		[startButton setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
-		
-		// Update numRows
-		[self updateData];
-		
-		// Stop recording
-		[ticker invalidate];
-		ticker = nil;
-		
-		// Start non-recording ticker
-		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
-	}
+	accelX += acceleration.x;
+	accelY += acceleration.y;
+	accelZ += acceleration.z;
+	accelValuesCollected++;
 }
 
-- (IBAction)tagButtonWasTouched:(id)sender
-{
-	// Center the map first
-	[self centerMap];
-	
-	// Make a callout
-	
-}
-
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
-{   
-    return YES;
-}
+/**************************
+ * Device event functions *
+ **************************/
 
 - (void)didReceiveMemoryWarning
 {
@@ -695,11 +743,13 @@ int const kDataPointsForAverage	= 5;
 	// Connect to SQL
 	[self sqlcon];
 	
-	// Set button labels
-	[startButton setTitle:@"Record"	forState:UIControlStateNormal];
-	[startButton setTitle:@"Stop"	forState:UIControlStateSelected];
+	// Set up label
+	[speedometer setNumberOfLines:0];
 	
-	[uploadButton setTitle:@"Upload" forState:UIControlStateNormal];
+	// Set button labels
+	[startButton	setTitle:@"Record"		forState:UIControlStateNormal];
+	[startButton	setTitle:@"Stop"		forState:UIControlStateSelected];
+	[uploadButton	setTitle:@"Upload"		forState:UIControlStateNormal];
 	
 	// Set button colors
 	[startButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
@@ -714,6 +764,7 @@ int const kDataPointsForAverage	= 5;
 	recording		= NO;
 	trackingUser	= YES;
 	hasAlertedUser	= NO;
+	speed			= 0.0;
 	
 	// Set up speed monitor
 	speedValues = [[NSMutableArray alloc] init];
@@ -729,8 +780,8 @@ int const kDataPointsForAverage	= 5;
 	oldLocation = nil;
 	
 	// Set up the map view
-	UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouch:)];
-	UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHandler:)];
+	UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouchHappened:)];
+	UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHappened:)];
 	
 	[pan setDelegate:self];
 	
@@ -738,7 +789,7 @@ int const kDataPointsForAverage	= 5;
 	[mapView addGestureRecognizer:pan];
 	[mapView setDelegate:self];
 	
-	[self centerMapOnLocation:locationManager.location andZoom:YES];
+	[self centerMapOnLocation:locationManager.location];
 	
 	// Set up accelorometer
 	accelerometer					= [UIAccelerometer sharedAccelerometer];
@@ -782,14 +833,6 @@ int const kDataPointsForAverage	= 5;
 	ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
 }
 
-- (void)accelerometer:(UIAccelerometer *)a didAccelerate:(UIAcceleration *)acceleration
-{
-	accelX += acceleration.x;
-	accelY += acceleration.y;
-	accelZ += acceleration.z;
-	accelValuesCollected++;
-}
-
 - (void)viewDidUnload
 {
     [super viewDidUnload];
@@ -797,7 +840,7 @@ int const kDataPointsForAverage	= 5;
 	self.startButton			= nil;
 	self.uploadButton			= nil;
 	self.tagButton				= nil;
-	self.spedometer				= nil;
+	self.speedometer			= nil;
 	self.dbpath					= nil;
 	self.device					= nil;
 	self.ticker					= nil;

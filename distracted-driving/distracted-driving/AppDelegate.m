@@ -26,7 +26,6 @@
     [self.window makeKeyAndVisible];
 	
 	// Register for Push Notifications
-	NSLog(@":: Registering device for push notifications.");
 	[[UIApplication sharedApplication] registerForRemoteNotificationTypes:(UIRemoteNotificationTypeAlert | UIRemoteNotificationTypeBadge | UIRemoteNotificationTypeSound)];
 	
 	// Prevent iPhone sleeping
@@ -37,16 +36,13 @@
 
 - (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
 {
-	// NSString *str = [NSString stringWithFormat:@"Device Token=%@",deviceToken];
-	// NSLog(str);
-	
 	NSCharacterSet *chars	= [NSCharacterSet characterSetWithCharactersInString:@"< >"];
 	NSString *str			= [[deviceToken description] stringByTrimmingCharactersInSet:chars];
 	device					= [str stringByReplacingOccurrencesOfString:@" " withString:@""];
 	
 	[self.viewController setDevice:device];
 	
-	NSLog(@":: Device ID acquired.");
+	NSLog(@":: Device ID acquired for push notifications.");
 }
 
 - (void)application:(UIApplication *)app didFailToRegisterForRemoteNotificationsWithError:(NSError *)err
