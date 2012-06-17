@@ -413,6 +413,11 @@ double const	kMapSpanDelta			= 0.005;
 // Handle callout button touches
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control
 {
+	tagMenu = [[TagMenuViewController alloc] init];
+	[[self view] addSubview:[tagMenu view]];
+	
+	return;
+	
 	NSMutableURLRequest	*request;
 	NSURLConnection		*connection;
 	NSString			*postString, *dateString;
@@ -851,6 +856,7 @@ double const	kMapSpanDelta			= 0.005;
 	self.recorder				= nil;
 	self.mapView				= nil;
 	self.speedValues			= nil;
+	self.tagMenu				= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated

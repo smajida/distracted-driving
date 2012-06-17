@@ -16,6 +16,7 @@
 #import <MapKit/MapKit.h>
 #import "MapTag.h"
 #import "GradientButton.h"
+#import "TagMenuViewController.h"
 
 // Settings (Constants)
 extern int const	kMinimumDrivingSpeed;
@@ -24,6 +25,8 @@ extern double const kMapSpanDelta;
 
 @interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate>
 {
+	TagMenuViewController *tagMenu;
+	
 	GradientButton		*startButton, *uploadButton, *tagButton;
 	UILabel				*speedometer;
 	sqlite3				*db;
@@ -40,6 +43,8 @@ extern double const kMapSpanDelta;
 	float				accelX, accelY, accelZ, speed;
 	BOOL				recording, trackingUser, hasAlertedUser;
 }
+
+@property (nonatomic, retain) TagMenuViewController		*tagMenu;
 
 @property (nonatomic, retain) IBOutlet GradientButton	*startButton, *uploadButton, *tagButton;
 @property (nonatomic, retain) IBOutlet UILabel			*speedometer;

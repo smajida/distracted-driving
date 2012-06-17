@@ -16,6 +16,10 @@
 		A32F0B6C1577DEFC0055FF27 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32F0B6B1577DEFC0055FF27 /* QuartzCore.framework */; };
 		A32F0B6E1577FF900055FF27 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32F0B6D1577FF900055FF27 /* MapKit.framework */; };
 		A32F0B71157804040055FF27 /* MapTag.m in Sources */ = {isa = PBXBuildFile; fileRef = A32F0B70157804040055FF27 /* MapTag.m */; };
+		A33F2F7A158D86260041EDBF /* TagMenuView.xib in Resources */ = {isa = PBXBuildFile; fileRef = A33F2F78158D86260041EDBF /* TagMenuView.xib */; };
+		A33F2F7D158D886A0041EDBF /* alert_background.png in Resources */ = {isa = PBXBuildFile; fileRef = A33F2F7B158D886A0041EDBF /* alert_background.png */; };
+		A33F2F7E158D886A0041EDBF /* behind_alert_view.png in Resources */ = {isa = PBXBuildFile; fileRef = A33F2F7C158D886A0041EDBF /* behind_alert_view.png */; };
+		A33F2F86158D91A60041EDBF /* TagMenuViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A33F2F85158D91A60041EDBF /* TagMenuViewController.m */; };
 		A3665D861561FAC7000E3AF2 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D851561FAC7000E3AF2 /* UIKit.framework */; };
 		A3665D881561FAC7000E3AF2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3665D871561FAC7000E3AF2 /* Foundation.framework */; };
 		A3665D8E1561FAC7000E3AF2 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A3665D8C1561FAC7000E3AF2 /* InfoPlist.strings */; };
@@ -57,6 +61,11 @@
 		A32F0B6D1577FF900055FF27 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 		A32F0B6F157804040055FF27 /* MapTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MapTag.h; sourceTree = "<group>"; };
 		A32F0B70157804040055FF27 /* MapTag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MapTag.m; sourceTree = "<group>"; };
+		A33F2F78158D86260041EDBF /* TagMenuView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = TagMenuView.xib; sourceTree = "<group>"; };
+		A33F2F7B158D886A0041EDBF /* alert_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = alert_background.png; sourceTree = "<group>"; };
+		A33F2F7C158D886A0041EDBF /* behind_alert_view.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = behind_alert_view.png; sourceTree = "<group>"; };
+		A33F2F84158D91A60041EDBF /* TagMenuViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TagMenuViewController.h; sourceTree = "<group>"; };
+		A33F2F85158D91A60041EDBF /* TagMenuViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TagMenuViewController.m; sourceTree = "<group>"; };
 		A3665D811561FAC7000E3AF2 /* distracted-driving.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "distracted-driving.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3665D851561FAC7000E3AF2 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		A3665D871561FAC7000E3AF2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -159,14 +168,17 @@
 			children = (
 				A3665D921561FAC7000E3AF2 /* AppDelegate.h */,
 				A3665D931561FAC7000E3AF2 /* AppDelegate.m */,
-				A3665D951561FAC7000E3AF2 /* ViewController.h */,
-				A3665D961561FAC7000E3AF2 /* ViewController.m */,
-				A32F0B6F157804040055FF27 /* MapTag.h */,
-				A32F0B70157804040055FF27 /* MapTag.m */,
-				A3665D981561FAC7000E3AF2 /* ViewController.xib */,
 				A32F0B671577DDA30055FF27 /* GradientButton.h */,
 				A32F0B681577DDA30055FF27 /* GradientButton.m */,
+				A32F0B6F157804040055FF27 /* MapTag.h */,
+				A32F0B70157804040055FF27 /* MapTag.m */,
 				A3665D8A1561FAC7000E3AF2 /* Supporting Files */,
+				A33F2F78158D86260041EDBF /* TagMenuView.xib */,
+				A33F2F84158D91A60041EDBF /* TagMenuViewController.h */,
+				A33F2F85158D91A60041EDBF /* TagMenuViewController.m */,
+				A3665D951561FAC7000E3AF2 /* ViewController.h */,
+				A3665D961561FAC7000E3AF2 /* ViewController.m */,
+				A3665D981561FAC7000E3AF2 /* ViewController.xib */,
 			);
 			path = "distracted-driving";
 			sourceTree = "<group>";
@@ -174,6 +186,8 @@
 		A3665D8A1561FAC7000E3AF2 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				A33F2F7B158D886A0041EDBF /* alert_background.png */,
+				A33F2F7C158D886A0041EDBF /* behind_alert_view.png */,
 				A3665D8B1561FAC7000E3AF2 /* distracted-driving-Info.plist */,
 				A3665D8C1561FAC7000E3AF2 /* InfoPlist.strings */,
 				A3665D8F1561FAC7000E3AF2 /* main.m */,
@@ -277,6 +291,9 @@
 				A321EC9F157E6F98009D2FD8 /* Icon.png in Resources */,
 				A321ECA1157E71BE009D2FD8 /* Default@2x.png in Resources */,
 				A321ECA3157E71D9009D2FD8 /* Default.png in Resources */,
+				A33F2F7A158D86260041EDBF /* TagMenuView.xib in Resources */,
+				A33F2F7D158D886A0041EDBF /* alert_background.png in Resources */,
+				A33F2F7E158D886A0041EDBF /* behind_alert_view.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +333,7 @@
 				A3665D971561FAC7000E3AF2 /* ViewController.m in Sources */,
 				A32F0B691577DDA30055FF27 /* GradientButton.m in Sources */,
 				A32F0B71157804040055FF27 /* MapTag.m in Sources */,
+				A33F2F86158D91A60041EDBF /* TagMenuViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
