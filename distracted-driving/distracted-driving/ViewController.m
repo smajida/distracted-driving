@@ -11,7 +11,7 @@
 @implementation ViewController
 
 // Settings (Constants)
-int const		kMinimumDrivingSpeed	= 5;
+int const		kMinimumDrivingSpeed	= 10;
 int const		kDataPointsForAverage	= 5;
 double const	kMapSpanDelta			= 0.005;
 
@@ -19,7 +19,7 @@ double const	kMapSpanDelta			= 0.005;
 @synthesize startButton, uploadButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, hasAlertedUser;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, hasAlertedUser, bgTask;
 
 /**************************
  * Initializing functions *
@@ -115,45 +115,35 @@ double const	kMapSpanDelta			= 0.005;
 			lowestSpeed = [[speedValues objectAtIndex:i] floatValue];
 	}
 	
-	averageSpeed = averageSpeed / [speedValues count];
-	
-	// Standard procedure with a good number of data points
-	if([speedValues count] == kDataPointsForAverage)
+	// Pretend the speed is zero while gathering data
+	if([speedValues count] > 0)
 	{
-		// Convert all to MPH
-		averageSpeed	= [self mphFromMps:averageSpeed];
-		highestSpeed	= [self mphFromMps:highestSpeed];
-		lowestSpeed		= [self mphFromMps:lowestSpeed];
+		averageSpeed = averageSpeed / [speedValues count];
 		
-		// Now, compare the determined values to see if the variation makes sense
-		if((highestSpeed - lowestSpeed) > 5)
+		// If there are enough points, we can use the average
+		if([speedValues count] == kDataPointsForAverage)
 		{
-			// Variation is greater than 5mph between the highest and lowest speeds, so check the average
-			if((highestSpeed - averageSpeed) > 5 || (averageSpeed - lowestSpeed) > 5)
+			if(([self mphFromMps:highestSpeed] - [self mphFromMps:lowestSpeed]) > 5)
 			{
-				// Variation is very high, probably due to acceleration; average the last two points
-				foo = [NSString stringWithFormat:@"High variation. (A: %d, H: %d, L: %d)", (int) averageSpeed, (int) highestSpeed, (int) lowestSpeed];\
+				// Peak/valley difference is high; bad average, use only two points
+				foo = @"Limited average.";
 				speed = [self mpsFromMph:([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue])/2];
 			}
 			else
 			{
-				// Variation is moderate (high between peaks and valleys, but low overall); the average should be used
-				foo = [NSString stringWithFormat:@"Moderate variation. (A: %d, H: %d, L: %d)", (int) averageSpeed, (int) highestSpeed, (int) lowestSpeed];
-				speed = [self mpsFromMph:averageSpeed];
+				// Peak/valley difference is low; good average, use all points
+				foo = @"Full average.";
+				speed = averageSpeed;
 			}
 		}
 		else
 		{
-			// Variation is low; the last point is good enough on its own
-			foo = [NSString stringWithFormat:@"Low variation. (A: %d, H: %d, L: %d)", (int) averageSpeed, (int) highestSpeed, (int) lowestSpeed];
-			speed = [self mpsFromMph:[[speedValues objectAtIndex:0] floatValue]];
+			foo = @"Gathering data.";
 		}
 	}
 	else
 	{
-		// With fewer points, we'll just average them and hope for the best
-		speed = averageSpeed;
-		foo = @"not enough points";
+		foo = @"No data yet.";
 	}
 	
 	[speedometer setText:[NSString stringWithFormat:@"%d mph\n%@", (int) [self mphFromMps:speed], foo]];
@@ -169,6 +159,28 @@ double const	kMapSpanDelta			= 0.005;
 - (float)mpsFromMph:(float)mph
 {
 	return mph / 2.23693629;
+}
+
+/***********************
+ * Animation functions *
+ ***********************/
+
+- (void)bounce1AnimationStopped
+{
+	[UIView beginAnimations:nil context:nil];
+	[UIView setAnimationDuration:0.3/2];
+	[UIView setAnimationDelegate:self];
+	[UIView setAnimationDidStopSelector:@selector(bounce2AnimationStopped)];
+	tagMenu.view.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.9, 0.9);
+	[UIView commitAnimations];
+}
+
+- (void)bounce2AnimationStopped
+{
+	[UIView beginAnimations:nil context:nil];
+	[UIView setAnimationDuration:0.3/2];
+	tagMenu.view.transform = CGAffineTransformIdentity;
+	[UIView commitAnimations];
 }
 
 /*****************************
@@ -243,6 +255,8 @@ double const	kMapSpanDelta			= 0.005;
 // Upload rows from the local database to the remote server
 - (void)uploadRows
 {
+	NSLog(@":: Uploading data to remote server.");
+	
 	// Temporary variables
 	NSString			*_id;
 	NSString			*_device;
@@ -395,9 +409,117 @@ double const	kMapSpanDelta			= 0.005;
 	[mapView setRegion:region animated:YES];
 }
 
+// Drop a maptag at the given location
+- (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate
+{
+	[mapView addAnnotation:[[MapTag alloc] initWithName:@"Mark as Dangerous" address:nil coordinate:coordinate]];
+}
+
+// Finish a location tag
+- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions
+{
+	NSMutableURLRequest	*request;
+	NSURLConnection		*connection;
+	NSString			*postString, *dateString;
+	BOOL				shouldPost = YES;
+	
+	// Get the date
+	NSDate				*date		= [NSDate date];
+	NSDateFormatter		*formatter	= [[NSDateFormatter alloc] init];
+	
+	[formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+	dateString = [formatter stringFromDate:date];
+	
+	// Send a request to the server to mark this location as dangerous
+	request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_tag.php"]];
+	
+	if(view)
+	{
+		// Include latitude and longitude in the post
+		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions];
+		
+		// Make a new annotation (DangerTag)
+		[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:nil coordinate:view.annotation.coordinate]];
+		
+		// Remove the annotation
+		[mapView removeAnnotation:view.annotation];
+	}
+	else if(traffic || roadConditions)
+	{
+		// Don't include latitude and longitude in the post
+		postString = [NSString stringWithFormat:@"device=%@&date=%@&traffic=%d&roadConditions=%d", device, dateString, traffic, roadConditions];
+	}
+	else
+	{
+		// Don't post at all
+		shouldPost = NO;
+	}
+	
+	if(shouldPost)
+	{
+		[request setHTTPMethod:@"POST"];
+		[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+		[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+		
+		connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+		
+		if(connection)
+			NSLog(@":: Danger tag successful.");
+		else
+			NSLog(@":: Danger tag failed.");
+	}
+}
+
 // Start following the user if they move far enough
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation
 {
+	// Update the speed
+	if(((int) manager.heading.trueHeading) != 0 && [self isValidLocation:newLocation])
+	{
+		float obj = (float) [newLocation distanceFromLocation:_oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
+		
+		if([speedValues count] < kDataPointsForAverage)
+			[speedValues addObject:[NSNumber numberWithFloat:obj]];
+		else
+		{
+			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+			[speedValues removeLastObject];
+		}
+		
+		[self calculateSpeed];
+	}
+	
+	if(speed > kMinimumDrivingSpeed && !hasAlertedUser && !recording)
+	{
+		NSString *alertString = [NSString stringWithFormat:@"You appear to be driving about %d mph!  Please start recording now.", (int) speed];
+		
+		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+		{
+			// Alert the user from the background that they need to record
+			bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+				[[UIApplication sharedApplication] endBackgroundTask:bgTask];
+				bgTask = UIBackgroundTaskInvalid;
+			}];
+			
+			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+				// Alert the user they need to start recording because they are driving
+				UILocalNotification *notification = [[UILocalNotification alloc] init];
+				notification.fireDate					= [NSDate dateWithTimeIntervalSinceNow:0];
+				notification.alertBody					= alertString;
+				notification.soundName					= UILocalNotificationDefaultSoundName;
+				
+				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+			});
+		}
+		else
+		{
+			UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Warning" message:alertString delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+			[alert show];
+		}
+		
+		hasAlertedUser = YES;
+	}
+	
 	// Check distance not from the last location but from the last centered location
 	if(!trackingUser && [self isValidLocation:newLocation] && [newLocation distanceFromLocation:lastCenteredLocation] > 100)
 		trackingUser = YES;
@@ -413,107 +535,50 @@ double const	kMapSpanDelta			= 0.005;
 // Handle callout button touches
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control
 {
-	tagMenu = [[TagMenuViewController alloc] init];
-	[[self view] addSubview:[tagMenu view]];
-	
-	return;
-	
-	NSMutableURLRequest	*request;
-	NSURLConnection		*connection;
-	NSString			*postString, *dateString;
-	
-	// Get the date
-	NSDate				*date		= [NSDate date];
-	NSDateFormatter		*formatter	= [[NSDateFormatter alloc] init];
-	
-	[formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
-	dateString = [formatter stringFromDate:date];
-	
-	// Get the annotation coordinate
-	CLLocationCoordinate2D coordinate = view.annotation.coordinate;
-	
-	// Send a request to the server to mark this location as dangerous
-	request		= [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_tag.php"]];
-	postString	= [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f", device, dateString, coordinate.latitude, coordinate.longitude];
-	
-	[request setHTTPMethod:@"POST"];
-	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
-	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
-	
-	connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-	
-	if(connection)
-	{
-		NSLog(@":: Danger tag successful.");
-	}
-	else
-	{
-		NSLog(@":: Danger tag failed.");
-	}
-	
-	// Remove the annotation
-	[mapView removeAnnotation:view.annotation];
-	
-	// Make a new annotation (DangerTag)
-	[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:nil coordinate:coordinate]];
+	[self openTagMenuWithAnnotationView:view];
 }
 
 // Handle annotations
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation
 {
-	NSString	*identifier;
-	BOOL		isDangerTag = NO, isUserLocation = NO;
+	NSString	*identifier = @"maptag";
+	BOOL		isDangerTag = NO;
 	
-	// Differentiate between user location, MapTags and DangerTags
+	// Skip user location annotation
 	if([annotation isKindOfClass:[MKUserLocation class]])
-	{
-		identifier		= @"userlocation";
-		isUserLocation	= YES;
-	}
-	else if([annotation isKindOfClass:[MapTag class]])
-	{
-		identifier	= @"maptag";
-	}
-	else
+		return nil;
+	
+	// Differentiate between MapTags and DangerTags
+	if([annotation isKindOfClass:[DangerTag class]])
 	{
 		identifier	= @"dangertag";
 		isDangerTag	= YES;
 	}
 	
-	MKPinAnnotationView *annotationView;
+	// Load the annotation view
+	MKPinAnnotationView *annotationView = (MKPinAnnotationView *) [mapView dequeueReusableAnnotationViewWithIdentifier:identifier];
 	
-	if(!isUserLocation)
+	// Create a new one, if one didn't already exist
+	if(annotationView == nil)
+		annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
+	else
+		annotationView.annotation = annotation;
+	
+	// Allow user interaction
+	annotationView.enabled			= YES;
+	annotationView.canShowCallout	= YES;
+	
+	if(isDangerTag)
 	{
-		annotationView = (MKPinAnnotationView *) [mapView dequeueReusableAnnotationViewWithIdentifier:identifier];
-		
-		if(annotationView == nil)
-			annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:identifier];
-		else
-			annotationView.annotation = annotation;
-		
-		annotationView.enabled			= YES;
-		annotationView.canShowCallout	= YES;
-		
-		if(isDangerTag)
-		{
-			annotationView.pinColor		= MKPinAnnotationColorRed;
-			annotationView.animatesDrop	= NO;
-		}
-		else
-		{
-			annotationView.pinColor		= MKPinAnnotationColorGreen;
-			annotationView.animatesDrop	= YES;
-			
-			// Add a button to allow users to tag this pin as a dangerous zone
-			UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
-			[annotationView setRightCalloutAccessoryView:btn];
-		}
+		// Danger tags are red and appear instantly
+		annotationView.pinColor		= MKPinAnnotationColorRed;
+		annotationView.animatesDrop	= NO;
 	}
 	else
 	{
-		// User location
-		annotationView = (MKPinAnnotationView *) [mapView viewForAnnotation:annotation];
-		annotationView.annotation = annotation;
+		// Map tags are green and animate dropping in
+		annotationView.pinColor		= MKPinAnnotationColorGreen;
+		annotationView.animatesDrop	= YES;
 		
 		// Add a button to allow users to tag this pin as a dangerous zone
 		UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
@@ -521,6 +586,66 @@ double const	kMapSpanDelta			= 0.005;
 	}
 	
 	return annotationView;
+}
+
+/*****************************
+ * Display (popup) functions *
+ *****************************/
+
+// Open the tag menu popup
+- (void)openTagMenuWithTitle:(NSString *)title andAnnotationView:(MKAnnotationView *)view
+{
+	// Display the background
+	tagMenuBackground = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"behind_alert_view.png"]];
+	[tagMenuBackground setFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height)];
+	[self.view addSubview:(UIView *)tagMenuBackground];
+	
+	// Set up the tag menu
+	if(title)
+		tagMenu = [[TagMenuViewController alloc] initWithTitle:title];
+	else
+		tagMenu = [[TagMenuViewController alloc] init];
+	
+	tagMenu.delegate = self;
+	
+	if(view)
+		tagMenu.annotationView = view;
+	
+	// Animate it!
+	tagMenu.view.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.001, 0.001);
+	[UIView beginAnimations:nil context:nil];
+	[UIView setAnimationDuration:0.3/1.5];
+	[UIView setAnimationDelegate:self];
+	[UIView setAnimationDidStopSelector:@selector(bounce1AnimationStopped)];
+	[self.view addSubview:tagMenu.view];
+	tagMenu.view.transform = CGAffineTransformScale(CGAffineTransformIdentity, 1.1, 1.1);
+	[UIView commitAnimations];
+}
+
+- (void)openTagMenuWithTitle:(NSString *)title
+{
+	return [self openTagMenuWithTitle:title andAnnotationView:nil];
+}
+
+- (void)openTagMenuWithAnnotationView:(MKAnnotationView *)view
+{
+	return [self openTagMenuWithTitle:nil andAnnotationView:view];
+}
+
+- (void)openTagMenu
+{
+	return [self openTagMenuWithTitle:nil andAnnotationView:nil];
+}
+
+// Receive this action when the popup is closed
+- (void)tagMenuDidClose
+{
+	// Remove the image overlay
+	[tagMenuBackground removeFromSuperview];
+	tagMenuBackground = nil;
+	
+	// Free data from the menu itself
+	tagMenu = nil;
 }
 
 /*****************************
@@ -533,7 +658,7 @@ double const	kMapSpanDelta			= 0.005;
 	if(gestureRecognizer.state == UIGestureRecognizerStateBegan)
 	{
 		// Drop a pin at that location
-		[mapView addAnnotation:[[MapTag alloc] initWithName:@"Mark as Dangerous" address:nil coordinate:[mapView convertPoint:[gestureRecognizer locationInView:mapView] toCoordinateFromView:mapView]]];
+		[self dropPinAtCoordinate:[mapView convertPoint:[gestureRecognizer locationInView:mapView] toCoordinateFromView:mapView]];
 	}
 }
 
@@ -581,6 +706,12 @@ double const	kMapSpanDelta			= 0.005;
 		
 		// Start non-recording ticker
 		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
+		
+		// Reset the alert
+		hasAlertedUser = NO;
+		
+		// Display the popup
+		[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
 	}
 }
 
@@ -590,8 +721,21 @@ double const	kMapSpanDelta			= 0.005;
 	// Center the map first
 	[self centerMapOnLocation:locationManager.location];
 	
-	// Make a callout
+	// Drop a pin at the current location
+	[self dropPinAtCoordinate:locationManager.location.coordinate];
 	
+	// Get the annotation view for that pin
+	for(id<MKAnnotation> annotation in [mapView annotations])
+	{
+		if(locationManager.location.coordinate.latitude == annotation.coordinate.latitude && locationManager.location.coordinate.longitude == annotation.coordinate.longitude)
+		{
+			// Open the tag menu and pass in the view for this pin
+			[self openTagMenuWithAnnotationView:[mapView viewForAnnotation:annotation]];
+			
+			// Stop searching, since we found the pin already
+			break;
+		}
+	}
 }
 
 // Action received when the upload button is touched
@@ -615,30 +759,17 @@ double const	kMapSpanDelta			= 0.005;
 // The tick when not recording data
 - (void)monitorWhileNotRecording:(id)sender
 {
-	// Detect driving and alert the user to enable recording if not recording
-	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
-	{
-		float obj = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
-		
-		if([speedValues count] < kDataPointsForAverage)
-			[speedValues addObject:[NSNumber numberWithFloat:obj]];
-		else
-		{
-			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
-			[speedValues removeLastObject];
-		}
-		
-		// Average the speed
-		[self calculateSpeed];
-		
-		oldLocation = locationManager.location;
-	}
+	// Average the speed
+	// [self calculateSpeed];
 }
 
 // The tick when recording data
 - (void)record:(id)sender
 {
 	NSString *accel, *sound, *gps, *compass, *battery;
+	
+	// Average the speed
+	[self calculateSpeed];
 	
 	// Accelorometer
 	if(accelValuesCollected > 0)
@@ -666,7 +797,7 @@ double const	kMapSpanDelta			= 0.005;
 	
 	// GPS
 	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
-		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, locationManager.location.speed];
+		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, speed];
 	else
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: Unknown, Speed: Unknown", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude];
 	
@@ -692,25 +823,6 @@ double const	kMapSpanDelta			= 0.005;
 	
 	[self insertRowWithAccelorometer:accel andSound:sound andGps:gps andCompass:compass andBattery:battery];
 	[self updateData];
-	
-	// Speed
-	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
-	{
-		float obj = (float) [locationManager.location distanceFromLocation:oldLocation] / (float) [locationManager.location.timestamp timeIntervalSinceDate:oldLocation.timestamp];
-		
-		if([speedValues count] < kDataPointsForAverage)
-			[speedValues addObject:[NSNumber numberWithFloat:obj]];
-		else
-		{
-			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
-			[speedValues removeLastObject];
-		}
-		
-		// Average the speed
-		[self calculateSpeed];
-		
-		oldLocation = locationManager.location;
-	}
 }
 
 /********************
@@ -741,6 +853,10 @@ double const	kMapSpanDelta			= 0.005;
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+	
+	// Clear old notifications
+	[[UIApplication sharedApplication] cancelAllLocalNotifications];
+	[[UIApplication sharedApplication] setApplicationIconBadgeNumber:0];
 	
 	// Enable battery monitoring
 	[[UIDevice currentDevice] setBatteryMonitoringEnabled:YES];
@@ -857,6 +973,7 @@ double const	kMapSpanDelta			= 0.005;
 	self.mapView				= nil;
 	self.speedValues			= nil;
 	self.tagMenu				= nil;
+	self.tagMenuBackground		= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated

@@ -10,7 +10,7 @@
 
 @implementation TagMenuViewController
 
-@synthesize titleLabel, roadSwitch, trafficSwitch, titleText;
+@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, titleText;
 
 - (id)initWithTitle:(NSString *)text
 {
@@ -31,8 +31,10 @@
 
 - (IBAction)closeAndTag:(id)sender
 {
-	// Tag here
-	NSLog(@"Should tag as dangerous, with road (%d) and traffic (%d).", roadSwitch.on, trafficSwitch.on);
+	if(delegate && annotationView)
+		[delegate tagViewAsDangerous:annotationView withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on];
+	else if(delegate && !annotationView)
+		[delegate tagViewAsDangerous:nil withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on];
 	
 	[self close:sender];
 }
@@ -40,6 +42,9 @@
 - (IBAction)close:(id)sender
 {
 	[[self view] removeFromSuperview];
+	
+	if(delegate)
+		[delegate tagMenuDidClose];
 }
 
 - (void)viewDidLoad
