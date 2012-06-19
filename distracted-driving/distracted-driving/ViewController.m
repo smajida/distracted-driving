@@ -127,7 +127,7 @@ double const	kMapSpanDelta			= 0.005;
 			{
 				// Peak/valley difference is high; bad average, use only two points
 				foo = @"Limited average.";
-				speed = [self mpsFromMph:([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue])/2];
+				speed = [self mpsFromMph:(([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue]) / 2)];
 			}
 			else
 			{
@@ -394,19 +394,7 @@ double const	kMapSpanDelta			= 0.005;
 // Shortcut to the automatic centering function
 - (void)centerMapOnLocation:(CLLocation *)location
 {
-	// Temporary variables
-	MKCoordinateRegion		region;
-	MKCoordinateSpan		span;
-	
-	// Set the span
-	span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
-	
-	// Set up the region
-	region.span		= span;
-	region.center	= location.coordinate;
-	
-	// Set the map view
-	[mapView setRegion:region animated:YES];
+	[mapView setCenterCoordinate:location.coordinate animated:YES];
 }
 
 // Drop a maptag at the given location
@@ -477,16 +465,20 @@ double const	kMapSpanDelta			= 0.005;
 	if(((int) manager.heading.trueHeading) != 0 && [self isValidLocation:newLocation])
 	{
 		float obj = (float) [newLocation distanceFromLocation:_oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
+		[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
 		
-		if([speedValues count] < kDataPointsForAverage)
-			[speedValues addObject:[NSNumber numberWithFloat:obj]];
-		else
-		{
-			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+		if([speedValues count] > kDataPointsForAverage)
 			[speedValues removeLastObject];
-		}
 		
 		[self calculateSpeed];
+	}
+	
+	AppDelegate *foo = (AppDelegate *) [[UIApplication sharedApplication] delegate];
+	
+	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+	{
+		[foo fooWithFoo:@"foo'd in background"];
+		[foo fooWithFoo:[NSString stringWithFormat:@"Calculated speed in background: %f", [self mphFromMps:speed]]];
 	}
 	
 	if(speed > kMinimumDrivingSpeed && !hasAlertedUser && !recording)
@@ -503,10 +495,10 @@ double const	kMapSpanDelta			= 0.005;
 			
 			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
 				// Alert the user they need to start recording because they are driving
-				UILocalNotification *notification = [[UILocalNotification alloc] init];
-				notification.fireDate					= [NSDate dateWithTimeIntervalSinceNow:0];
-				notification.alertBody					= alertString;
-				notification.soundName					= UILocalNotificationDefaultSoundName;
+				UILocalNotification *notification	= [[UILocalNotification alloc] init];
+				notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+				notification.alertBody				= alertString;
+				notification.soundName				= UILocalNotificationDefaultSoundName;
 				
 				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
 			});
@@ -529,7 +521,7 @@ double const	kMapSpanDelta			= 0.005;
 - (void)mapView:(MKMapView *)_mapView didUpdateUserLocation:(MKUserLocation *)userLocation
 {
 	if(trackingUser)
-		[self centerMapOnLocation:(CLLocation *)userLocation];
+	 	[self centerMapOnLocation:(CLLocation *)userLocation];
 }
 
 // Handle callout button touches
@@ -910,7 +902,19 @@ double const	kMapSpanDelta			= 0.005;
 	[mapView addGestureRecognizer:pan];
 	[mapView setDelegate:self];
 	
-	[self centerMapOnLocation:locationManager.location];
+	// Temporary variables
+	MKCoordinateRegion		region;
+	MKCoordinateSpan		span;
+	
+	// Set the span
+	span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
+	
+	// Set up the region
+	region.span		= span;
+	region.center	= locationManager.location.coordinate;
+	
+	// Set mapView region
+	[mapView setRegion:region animated:YES];
 	
 	// Set up accelorometer
 	accelerometer					= [UIAccelerometer sharedAccelerometer];

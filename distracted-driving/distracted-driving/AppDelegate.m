@@ -31,7 +31,35 @@
 	// Prevent iPhone sleeping
 	[UIApplication sharedApplication].idleTimerDisabled = YES;
 	
+	// Check if the app has been woken up from the background
+	
+	
+	if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
+	{
+		NSLog(@"foo!");
+		[self fooWithFoo:@"launched from locations"];
+	}
+	else
+		[self fooWithFoo:@"launched normally"];
+	
     return YES;
+}
+
+- (void)fooWithFoo:(NSString *)foo
+{
+	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/test.php"]];
+	[request setHTTPMethod:@"POST"];
+	
+	NSString *postString = [NSString stringWithFormat:@"foo=%@", foo];
+	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	
+	NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+	
+	if(connection)
+	{
+		// NSLog(@"Foo!");
+	}
 }
 
 - (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken

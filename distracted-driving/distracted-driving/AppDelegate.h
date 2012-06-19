@@ -3,7 +3,7 @@
 //  distracted-driving
 //
 //  Created by Luke Godfrey on 5/14/12.
-//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//  Copyright (c) 2012 Luke Godfrey
 //
 
 #import <UIKit/UIKit.h>
@@ -18,5 +18,7 @@
 @property (strong, nonatomic) UIWindow *window;
 @property (strong, nonatomic) ViewController *viewController;
 @property (nonatomic, retain) NSString *device;
+
+- (void)fooWithFoo:(NSString *)foo;
 
 @end
