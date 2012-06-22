@@ -21,7 +21,10 @@
 
 // Settings (Constants)
 extern int const	kMinimumDrivingSpeed;
+extern int const	kDrasticSpeedChange;
+extern int const	kMaximumSpeedAge;
 extern int const	kDataPointsForAverage;
+extern int const	kAlertExpire;
 extern double const kMapSpanDelta;
 
 @interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate, TagMenuDelegate>
@@ -40,10 +43,11 @@ extern double const kMapSpanDelta;
 	AVAudioRecorder				*recorder;
 	MKMapView					*mapView;
 	NSMutableArray				*speedValues;
+	NSDate						*lastAlertedUser;
 	UIBackgroundTaskIdentifier	bgTask;
 	int							accelValuesCollected;
-	float						accelX, accelY, accelZ, speed;
-	BOOL						recording, trackingUser, hasAlertedUser;
+	float						accelX, accelY, accelZ, speed, thrownAwaySpeed;
+	BOOL						recording, trackingUser;
 }
 
 @property (nonatomic, retain) TagMenuViewController			*tagMenu;
@@ -60,10 +64,11 @@ extern double const kMapSpanDelta;
 @property (nonatomic, retain) AVAudioRecorder				*recorder;
 @property (nonatomic, retain) IBOutlet MKMapView			*mapView;
 @property (nonatomic, retain) NSMutableArray				*speedValues;
+@property (nonatomic, retain) NSDate						*lastAlertedUser;
 @property (nonatomic, assign) UIBackgroundTaskIdentifier	bgTask;
 @property (nonatomic, assign) int							accelValuesCollected;
-@property (nonatomic, assign) float							accelX, accelY, accelZ, speed;
-@property (nonatomic, assign) BOOL							recording, trackingUser, hasAlertedUser;
+@property (nonatomic, assign) float							accelX, accelY, accelZ, speed, thrownAwaySpeed;
+@property (nonatomic, assign) BOOL							recording, trackingUser;
 
 // Initializing functions
 - (BOOL)sqlcon;
@@ -90,7 +95,6 @@ extern double const kMapSpanDelta;
 - (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate;
 - (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
-- (void)mapView:(MKMapView *)_mapView didUpdateUserLocation:(MKUserLocation *)userLocation;
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control;
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation;
 

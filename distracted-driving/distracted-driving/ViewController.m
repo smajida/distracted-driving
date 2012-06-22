@@ -12,14 +12,16 @@
 
 // Settings (Constants)
 int const		kMinimumDrivingSpeed	= 10;
+int const		kDrasticSpeedChange		= 50;
 int const		kDataPointsForAverage	= 5;
+int const		kAlertExpire			= 300; // 5 minutes
 double const	kMapSpanDelta			= 0.005;
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, uploadButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues;
+@synthesize startButton, uploadButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, hasAlertedUser, bgTask;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed;
 
 /**************************
  * Initializing functions *
@@ -127,7 +129,7 @@ double const	kMapSpanDelta			= 0.005;
 			{
 				// Peak/valley difference is high; bad average, use only two points
 				foo = @"Limited average.";
-				speed = [self mpsFromMph:(([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue]) / 2)];
+				speed = (([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue]) / 2);
 			}
 			else
 			{
@@ -139,14 +141,18 @@ double const	kMapSpanDelta			= 0.005;
 		else
 		{
 			foo = @"Gathering data.";
+			speed = 0.0;
 		}
 	}
 	else
 	{
 		foo = @"No data yet.";
+		speed = 0.0;
 	}
 	
-	[speedometer setText:[NSString stringWithFormat:@"%d mph\n%@", (int) [self mphFromMps:speed], foo]];
+	// Convert speed to MPH
+	speed = [self mphFromMps:speed];
+	[speedometer setText:[NSString stringWithFormat:@"%d mph\n%@", (int) speed, foo]];
 }
 
 // Convert meters per second into miles per hour
@@ -372,7 +378,7 @@ double const	kMapSpanDelta			= 0.005;
 		return NO;
 	
 	// Throw out locations with invalid or imprecise accuracy values
-	if(newLocation.horizontalAccuracy < 0 || newLocation.horizontalAccuracy > 100)
+	if(!newLocation.horizontalAccuracy || newLocation.horizontalAccuracy < 0 || newLocation.horizontalAccuracy > 100)
 		return NO;
 	
 	// Throw out the first location sent to this function
@@ -394,7 +400,8 @@ double const	kMapSpanDelta			= 0.005;
 // Shortcut to the automatic centering function
 - (void)centerMapOnLocation:(CLLocation *)location
 {
-	[mapView setCenterCoordinate:location.coordinate animated:YES];
+	if([self isValidLocation:location])
+		[mapView setCenterCoordinate:location.coordinate animated:YES];
 }
 
 // Drop a maptag at the given location
@@ -462,26 +469,55 @@ double const	kMapSpanDelta			= 0.005;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation
 {
 	// Update the speed
-	if(((int) manager.heading.trueHeading) != 0 && [self isValidLocation:newLocation])
+	if(manager.heading.trueHeading >= 0 && [self isValidLocation:newLocation])
 	{
 		float obj = (float) [newLocation distanceFromLocation:_oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
-		[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+		
+		// Throw away old values if the last two thrown away values are very close
+		if(thrownAwaySpeed > 0 && fabs(thrownAwaySpeed - obj) < 5 && [speedValues count] == kDataPointsForAverage)
+		{
+			[speedValues removeAllObjects];
+			NSLog(@"Throwing out old speed");
+		}
+		
+		// Only add the point if it isn't drastically different from the average
+		thrownAwaySpeed = -1.0;
+		
+		if(fabs([self mphFromMps:obj] - speed) < kDrasticSpeedChange || [speedValues count] < kDataPointsForAverage)
+			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+		else if(fabs([self mphFromMps:obj] - speed) >= kDrasticSpeedChange)
+			thrownAwaySpeed = obj;
 		
 		if([speedValues count] > kDataPointsForAverage)
 			[speedValues removeLastObject];
 		
 		[self calculateSpeed];
+		
+		oldLocation = newLocation;
 	}
 	
 	AppDelegate *foo = (AppDelegate *) [[UIApplication sharedApplication] delegate];
 	
 	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 	{
-		[foo fooWithFoo:@"foo'd in background"];
-		[foo fooWithFoo:[NSString stringWithFormat:@"Calculated speed in background: %f", [self mphFromMps:speed]]];
+		NSDateFormatter *fmt	= [[NSDateFormatter alloc] init];
+		[fmt setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+		
+		NSString *fooMessage	= [NSString stringWithFormat:
+								@"%@ (%@) :: Speed: %d.  Accuracy: %d.  Heading: %d.  ds: %f.  dt: %f.",
+								device,
+								[fmt stringFromDate:[NSDate date]],
+								(int) speed,
+								(int) [newLocation horizontalAccuracy],
+								(int) manager.heading.trueHeading,
+								[newLocation distanceFromLocation:_oldLocation],
+								[newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp]
+								];
+		
+		[foo fooWithFoo:fooMessage];
 	}
 	
-	if(speed > kMinimumDrivingSpeed && !hasAlertedUser && !recording)
+	if(speed > kMinimumDrivingSpeed && !recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire)
 	{
 		NSString *alertString = [NSString stringWithFormat:@"You appear to be driving about %d mph!  Please start recording now.", (int) speed];
 		
@@ -509,19 +545,15 @@ double const	kMapSpanDelta			= 0.005;
 			[alert show];
 		}
 		
-		hasAlertedUser = YES;
+		lastAlertedUser = [NSDate date];
 	}
 	
 	// Check distance not from the last location but from the last centered location
 	if(!trackingUser && [self isValidLocation:newLocation] && [newLocation distanceFromLocation:lastCenteredLocation] > 100)
 		trackingUser = YES;
-}
-
-// Follow the user's location if tracking is enabled
-- (void)mapView:(MKMapView *)_mapView didUpdateUserLocation:(MKUserLocation *)userLocation
-{
+	
 	if(trackingUser)
-	 	[self centerMapOnLocation:(CLLocation *)userLocation];
+		[self centerMapOnLocation:newLocation];
 }
 
 // Handle callout button touches
@@ -700,7 +732,7 @@ double const	kMapSpanDelta			= 0.005;
 		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
 		
 		// Reset the alert
-		hasAlertedUser = NO;
+		lastAlertedUser = [NSDate dateWithTimeIntervalSince1970:0];
 		
 		// Display the popup
 		[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
@@ -782,13 +814,13 @@ double const	kMapSpanDelta			= 0.005;
 		sound = @"Unknown";
 	
 	// Compass
-	if(((int) locationManager.heading.magneticHeading) != 0)
+	if(locationManager.heading.magneticHeading >= 0)
 		compass = [NSString stringWithFormat:@"%f", locationManager.heading.magneticHeading];
 	else
 		compass = @"Unknown";
 	
 	// GPS
-	if(((int) locationManager.heading.trueHeading) != 0 && [self isValidLocation:locationManager.location])
+	if(locationManager.heading.trueHeading >= 0 && [self isValidLocation:locationManager.location])
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, speed];
 	else
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: Unknown, Speed: Unknown", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude];
@@ -874,10 +906,11 @@ double const	kMapSpanDelta			= 0.005;
 	device = @"Unknown";
 	
 	// Set other variables
-	recording		= NO;
-	trackingUser	= YES;
-	hasAlertedUser	= NO;
-	speed			= 0.0;
+	recording			= NO;
+	trackingUser		= YES;
+	lastAlertedUser		= [NSDate dateWithTimeIntervalSince1970:0];
+	speed				= 0.0;
+	thrownAwaySpeed		= -1.0;
 	
 	// Set up speed monitor
 	speedValues = [[NSMutableArray alloc] init];
@@ -976,6 +1009,7 @@ double const	kMapSpanDelta			= 0.005;
 	self.recorder				= nil;
 	self.mapView				= nil;
 	self.speedValues			= nil;
+	self.lastAlertedUser		= nil;
 	self.tagMenu				= nil;
 	self.tagMenuBackground		= nil;
 }

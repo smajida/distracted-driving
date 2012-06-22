@@ -36,7 +36,6 @@
 	
 	if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
 	{
-		NSLog(@"foo!");
 		[self fooWithFoo:@"launched from locations"];
 	}
 	else
