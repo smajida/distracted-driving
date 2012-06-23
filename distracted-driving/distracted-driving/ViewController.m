@@ -401,7 +401,10 @@ double const	kMapSpanDelta			= 0.005;
 - (void)centerMapOnLocation:(CLLocation *)location
 {
 	if([self isValidLocation:location])
+	{
 		[mapView setCenterCoordinate:location.coordinate animated:YES];
+		lastCenteredLocation = location;
+	}
 }
 
 // Drop a maptag at the given location
