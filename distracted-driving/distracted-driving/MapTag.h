@@ -13,10 +13,12 @@
 {
 	NSString				*name, *address;
 	CLLocationCoordinate2D	coordinate;
+	BOOL					animateDrop;
 }
 
 @property (copy) NSString								*name, *address;
 @property (nonatomic, readonly) CLLocationCoordinate2D	coordinate;
+@property (nonatomic, assign) BOOL						animateDrop;
 
 - (id)initWithName:(NSString*)_name address:(NSString*)_address coordinate:(CLLocationCoordinate2D)_coordinate;
 
@@ -26,10 +28,12 @@
 {
 	NSString				*name, *address;
 	CLLocationCoordinate2D	coordinate;
+	BOOL					animateDrop;
 }
 
 @property (copy) NSString								*name, *address;
 @property (nonatomic, readonly) CLLocationCoordinate2D	coordinate;
+@property (nonatomic, assign) BOOL						animateDrop;
 
 - (id)initWithName:(NSString*)_name address:(NSString*)_address coordinate:(CLLocationCoordinate2D)_coordinate;
 

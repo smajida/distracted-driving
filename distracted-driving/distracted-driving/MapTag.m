@@ -10,7 +10,7 @@
 
 @implementation MapTag
 
-@synthesize name, address, coordinate;
+@synthesize name, address, coordinate, animateDrop;
 
 - (id)initWithName:(NSString*)_name address:(NSString*)_address coordinate:(CLLocationCoordinate2D)_coordinate
 {
@@ -19,6 +19,7 @@
 		name		= [_name copy];
 		address		= [_address copy];
 		coordinate	= _coordinate;
+		animateDrop	= YES;
 	}
 	
 	return self;
@@ -38,7 +39,7 @@
 
 @implementation DangerTag
 
-@synthesize name, address, coordinate;
+@synthesize name, address, coordinate, animateDrop;
 
 - (id)initWithName:(NSString*)_name address:(NSString*)_address coordinate:(CLLocationCoordinate2D)_coordinate
 {
@@ -47,6 +48,7 @@
 		name		= [_name copy];
 		address		= [_address copy];
 		coordinate	= _coordinate;
+		animateDrop	= NO;
 	}
 	
 	return self;

@@ -31,7 +31,7 @@ extern double const kMapSpanDelta;
 {
 	TagMenuViewController		*tagMenu;
 	UIImageView					*tagMenuBackground;
-	GradientButton				*startButton, *uploadButton, *tagButton;
+	GradientButton				*startButton, *tagButton;
 	UILabel						*speedometer;
 	sqlite3						*db;
 	NSTimer						*ticker;
@@ -44,16 +44,18 @@ extern double const kMapSpanDelta;
 	MKMapView					*mapView;
 	NSMutableArray				*speedValues;
 	NSDate						*lastAlertedUser;
+	NSURLConnection				*dangerTagsConnection;
+	NSMutableData				*dangerTagsData;
 	UIBackgroundTaskIdentifier	bgTask;
 	int							accelValuesCollected;
 	float						accelX, accelY, accelZ, speed, thrownAwaySpeed;
-	BOOL						recording, trackingUser;
+	BOOL						recording, trackingUser, didGetDangerTags;
 }
 
 @property (nonatomic, retain) TagMenuViewController			*tagMenu;
 @property (nonatomic, retain) UIImageView					*tagMenuBackground;
 
-@property (nonatomic, retain) IBOutlet GradientButton		*startButton, *uploadButton, *tagButton;
+@property (nonatomic, retain) IBOutlet GradientButton		*startButton, *tagButton;
 @property (nonatomic, retain) IBOutlet UILabel				*speedometer;
 @property (nonatomic, retain) NSTimer						*ticker;
 @property (nonatomic, retain) NSString						*dbpath;
@@ -65,10 +67,12 @@ extern double const kMapSpanDelta;
 @property (nonatomic, retain) IBOutlet MKMapView			*mapView;
 @property (nonatomic, retain) NSMutableArray				*speedValues;
 @property (nonatomic, retain) NSDate						*lastAlertedUser;
+@property (nonatomic, retain) NSURLConnection				*dangerTagsConnection;
+@property (nonatomic, retain) NSMutableData					*dangerTagsData;
 @property (nonatomic, assign) UIBackgroundTaskIdentifier	bgTask;
 @property (nonatomic, assign) int							accelValuesCollected;
 @property (nonatomic, assign) float							accelX, accelY, accelZ, speed, thrownAwaySpeed;
-@property (nonatomic, assign) BOOL							recording, trackingUser;
+@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags;
 
 // Initializing functions
 - (BOOL)sqlcon;
@@ -87,7 +91,11 @@ extern double const kMapSpanDelta;
 - (int)numRows;
 - (void)uploadRows;
 - (void)emptyTable;
-- (void)updateData;
+
+// Server/Connection functions
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response;
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data;
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection;
 
 // Location functions
 - (BOOL)isValidLocation:(CLLocation *)newLocation;
@@ -110,7 +118,6 @@ extern double const kMapSpanDelta;
 - (void)panHappened:(UIGestureRecognizer *)gestureRecognizer;
 - (IBAction)startButtonWasTouched:(id)sender;
 - (IBAction)tagButtonWasTouched:(id)sender;
-- (IBAction)uploadButtonWasTouched:(id)sender;
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
 // Ticking functions

@@ -32,8 +32,6 @@
 	[UIApplication sharedApplication].idleTimerDisabled = YES;
 	
 	// Check if the app has been woken up from the background
-	
-	
 	if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
 	{
 		[self fooWithFoo:@"launched from locations"];
@@ -103,7 +101,7 @@
 	 Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
 	 */
 	
-	// Warn the user that something is happening
+	/*
 	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/push.php"]];
 	[request setHTTPMethod:@"POST"];
 	
@@ -121,6 +119,7 @@
 	{
 		NSLog(@":: Connection to remote server failed.");
 	}
+	*/
 }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application

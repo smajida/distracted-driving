@@ -10,23 +10,38 @@
 
 @implementation TagMenuViewController
 
-@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, titleText;
+@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, tagButton, cancelButton, uploadButton, titleText, isUploadType;
 
-- (id)initWithTitle:(NSString *)text
+- (id)initWithTitle:(NSString *)text withUpload:(BOOL)upload
 {
 	self = [super initWithNibName:@"TagMenuView" bundle:nil];
 	
 	if(self)
 	{
-		titleText = text;
+		titleText		= text;
+		isUploadType	= upload;
 	}
 	
 	return self;
 }
 
+- (id)initWithTitle:(NSString *)text
+{
+	return [self initWithTitle:text withUpload:NO];
+}
+
 - (id)init
 {
 	return [self initWithTitle:@"Tag as Dangerous"];
+}
+
+- (IBAction)closeAndUpload:(id)sender
+{
+	if(delegate)
+	{
+		[delegate uploadRows];
+		return [self closeAndTag:sender];
+	}
 }
 
 - (IBAction)closeAndTag:(id)sender
@@ -52,6 +67,14 @@
     [super viewDidLoad];
 	
 	[titleLabel setText:titleText];
+	
+	if(isUploadType)
+	{
+		tagButton.hidden	= YES;
+		cancelButton.hidden	= YES;
+	}
+	else
+		uploadButton.hidden	= YES;
 }
 
 - (void)viewDidUnload

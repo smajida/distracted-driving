@@ -14,14 +14,14 @@
 int const		kMinimumDrivingSpeed	= 10;
 int const		kDrasticSpeedChange		= 50;
 int const		kDataPointsForAverage	= 5;
-int const		kAlertExpire			= 300; // 5 minutes
+int const		kAlertExpire			= 300;		// 5 minutes
 double const	kMapSpanDelta			= 0.005;
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, uploadButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser;
+@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, dangerTagsData, dangerTagsConnection;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags;
 
 /**************************
  * Initializing functions *
@@ -100,6 +100,7 @@ double const	kMapSpanDelta			= 0.005;
 {
 	// Temporary variables
 	float averageSpeed = 0.0, highestSpeed = 0.0, lowestSpeed = 0.0;
+	
 	NSString *foo;
 	
 	// Get average, lowest, and highest speeds for the data points
@@ -117,7 +118,7 @@ double const	kMapSpanDelta			= 0.005;
 			lowestSpeed = [[speedValues objectAtIndex:i] floatValue];
 	}
 	
-	// Pretend the speed is zero while gathering data
+	// Pretend the speed is zero while gathering data, and if there are multiple zeros pretend the speed is zero
 	if([speedValues count] > 0)
 	{
 		averageSpeed = averageSpeed / [speedValues count];
@@ -129,7 +130,11 @@ double const	kMapSpanDelta			= 0.005;
 			{
 				// Peak/valley difference is high; bad average, use only two points
 				foo = @"Limited average.";
-				speed = (([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue]) / 2);
+				
+				if([[speedValues objectAtIndex:0] intValue] == 0 || [[speedValues objectAtIndex:1] intValue] == 0)
+					speed = 0.0; // If either of the last two points are zero, assume zero
+				else
+					speed = (([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue]) / 2);
 			}
 			else
 			{
@@ -261,69 +266,72 @@ double const	kMapSpanDelta			= 0.005;
 // Upload rows from the local database to the remote server
 - (void)uploadRows
 {
-	NSLog(@":: Uploading data to remote server.");
-	
-	// Temporary variables
-	NSString			*_id;
-	NSString			*_device;
-	NSString			*date;
-	NSString			*accelorometer;
-	NSString			*sound;
-	NSString			*gps;
-	NSString			*compass;
-	NSString			*battery;
-	NSMutableURLRequest	*request;
-	NSURLConnection		*connection;
-	sqlite3_stmt		*query;
-	
-	if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
+	if([self numRows] > 0)
 	{
-		NSString *nsquery = @"SELECT * FROM collected_data";
+		NSLog(@":: Uploading data to remote server.");
 		
-		const char *cquery = [nsquery UTF8String];
+		// Temporary variables
+		NSString			*_id;
+		NSString			*_device;
+		NSString			*date;
+		NSString			*accelorometer;
+		NSString			*sound;
+		NSString			*gps;
+		NSString			*compass;
+		NSString			*battery;
+		NSMutableURLRequest	*request;
+		NSURLConnection		*connection;
+		sqlite3_stmt		*query;
 		
-		sqlite3_prepare_v2(db, cquery, -1, &query, NULL);
-		
-		while(sqlite3_step(query) == SQLITE_ROW)
+		if(sqlite3_open([dbpath UTF8String], &db) == SQLITE_OK)
 		{
-			_id				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 0)];
-			_device			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 1)];
-			date			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 2)];
-			accelorometer	= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 3)];
-			sound			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 4)];
-			gps				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 5)];
-			compass			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 6)];
-			battery			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 7)];
-			request			= [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_data.php"]];
+			NSString *nsquery = @"SELECT * FROM collected_data";
 			
-			[request setHTTPMethod:@"POST"];
+			const char *cquery = [nsquery UTF8String];
 			
-			NSString *postString = [NSString stringWithFormat:@"device=%@&date=%@&accelorometer=%@&sound=%@&gps=%@&compass=%@&battery=%@", _device, date, accelorometer, sound, gps, compass, battery];
+			sqlite3_prepare_v2(db, cquery, -1, &query, NULL);
 			
-			[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
-			
-			[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
-			
-			connection		= [[NSURLConnection alloc] initWithRequest:request delegate:self];
-			
-			if(connection)
+			while(sqlite3_step(query) == SQLITE_ROW)
 			{
-				// NSLog(@":: SQL row upload successful.");
+				_id				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 0)];
+				_device			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 1)];
+				date			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 2)];
+				accelorometer	= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 3)];
+				sound			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 4)];
+				gps				= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 5)];
+				compass			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 6)];
+				battery			= [NSString stringWithUTF8String:(const char *) sqlite3_column_text(query, 7)];
+				request			= [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_data.php"]];
+				
+				[request setHTTPMethod:@"POST"];
+				
+				NSString *postString = [NSString stringWithFormat:@"device=%@&date=%@&accelorometer=%@&sound=%@&gps=%@&compass=%@&battery=%@", _device, date, accelorometer, sound, gps, compass, battery];
+				
+				[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+				
+				[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+				
+				connection		= [[NSURLConnection alloc] initWithRequest:request delegate:self];
+				
+				if(connection)
+				{
+					// NSLog(@":: SQL row upload successful.");
+				}
+				else
+				{
+					NSLog(@":: SQL row upload failed.");
+				}
 			}
-			else
-			{
-				NSLog(@":: SQL row upload failed.");
-			}
+			
+			sqlite3_finalize(query);
+			sqlite3_close(db);
 		}
+		else
+			NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 		
-		sqlite3_finalize(query);
-		sqlite3_close(db);
+		// Empty the table now that the rows have been uploaded
+		[self emptyTable];
 	}
-	else
-		NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
-	
-	// Empty the table now that the rows have been uploaded
-	[self emptyTable];
 }
 
 // Delete all entries in the local database
@@ -351,19 +359,6 @@ double const	kMapSpanDelta			= 0.005;
 	}
 	else
 		NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
-	
-	[self updateData];
-}
-
-// Update the upload button -- blue when there is data to send, gray when there is no data to send
-- (void)updateData
-{
-	int rows = [self numRows];
-	
-	if(rows > 0)
-		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.1f blue:0.6f alpha:1.0f]];
-	else
-		[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.25f green:0.25f blue:0.25f alpha:1.0f]];
 }
 
 /**********************
@@ -419,7 +414,6 @@ double const	kMapSpanDelta			= 0.005;
 	NSMutableURLRequest	*request;
 	NSURLConnection		*connection;
 	NSString			*postString, *dateString;
-	BOOL				shouldPost = YES;
 	
 	// Get the date
 	NSDate				*date		= [NSDate date];
@@ -433,99 +427,112 @@ double const	kMapSpanDelta			= 0.005;
 	
 	if(view)
 	{
-		// Include latitude and longitude in the post
-		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions];
+		// Specifically tagged location
+		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&trip=0", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions];
+		
+		NSString *subtitle;
+		BOOL isSafe = NO;
+		
+		if(roadConditions && traffic)
+			subtitle = @"Dangerous traffic and road conditions";
+		else if(roadConditions)
+			subtitle = @"Dangerous road conditions";
+		else if(traffic)
+			subtitle = @"Dangerous traffic conditions";
+		else
+			isSafe = YES;
 		
 		// Make a new annotation (DangerTag)
-		[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:nil coordinate:view.annotation.coordinate]];
+		if(!isSafe)
+			[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:subtitle coordinate:view.annotation.coordinate]];
 		
 		// Remove the annotation
 		[mapView removeAnnotation:view.annotation];
 	}
-	else if(traffic || roadConditions)
-	{
-		// Don't include latitude and longitude in the post
-		postString = [NSString stringWithFormat:@"device=%@&date=%@&traffic=%d&roadConditions=%d", device, dateString, traffic, roadConditions];
-	}
 	else
 	{
-		// Don't post at all
-		shouldPost = NO;
+		// Trip tag
+		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&trip=1", device, dateString, locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, traffic, roadConditions];
 	}
 	
-	if(shouldPost)
-	{
-		[request setHTTPMethod:@"POST"];
-		[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
-		[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
-		
-		connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-		
-		if(connection)
-			NSLog(@":: Danger tag successful.");
-		else
-			NSLog(@":: Danger tag failed.");
-	}
+	[request setHTTPMethod:@"POST"];
+	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	
+	connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+	
+	if(connection)
+		NSLog(@":: Danger tag successful!");
+	else
+		NSLog(@":: Danger tag failed.");
 }
 
 // Start following the user if they move far enough
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation
 {
+	AppDelegate *foo = (AppDelegate *) [[UIApplication sharedApplication] delegate];
+	float ds = [newLocation distanceFromLocation:_oldLocation];
+	float dt = [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
+	
 	// Update the speed
 	if(manager.heading.trueHeading >= 0 && [self isValidLocation:newLocation])
 	{
-		float obj = (float) [newLocation distanceFromLocation:_oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
-		
-		// Throw away old values if the last two thrown away values are very close
-		if(thrownAwaySpeed > 0 && fabs(thrownAwaySpeed - obj) < 5 && [speedValues count] == kDataPointsForAverage)
+		if(dt < 30)
 		{
-			[speedValues removeAllObjects];
-			NSLog(@"Throwing out old speed");
+			// Only affect speed if the updates are more frequent than 30 seconds apart
+			float obj = (float) [newLocation distanceFromLocation:_oldLocation] / (float) [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
+			
+			// Throw away old values if the last two thrown away values are very close
+			if(thrownAwaySpeed > 0 && fabs(thrownAwaySpeed - obj) < 5 && [speedValues count] == kDataPointsForAverage)
+			{
+				[speedValues removeAllObjects];
+				NSLog(@"Throwing out old speed");
+			}
+			
+			// Only add the point if it isn't drastically different from the average
+			thrownAwaySpeed = -1.0;
+			
+			if(fabs([self mphFromMps:obj] - speed) < kDrasticSpeedChange || [speedValues count] < kDataPointsForAverage)
+				[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
+			else if(fabs([self mphFromMps:obj] - speed) >= kDrasticSpeedChange)
+				thrownAwaySpeed = obj;
+			
+			if([speedValues count] > kDataPointsForAverage)
+				[speedValues removeLastObject];
+			
+			[self calculateSpeed];
 		}
-		
-		// Only add the point if it isn't drastically different from the average
-		thrownAwaySpeed = -1.0;
-		
-		if(fabs([self mphFromMps:obj] - speed) < kDrasticSpeedChange || [speedValues count] < kDataPointsForAverage)
-			[speedValues insertObject:[NSNumber numberWithFloat:obj] atIndex:0];
-		else if(fabs([self mphFromMps:obj] - speed) >= kDrasticSpeedChange)
-			thrownAwaySpeed = obj;
-		
-		if([speedValues count] > kDataPointsForAverage)
-			[speedValues removeLastObject];
-		
-		[self calculateSpeed];
-		
-		oldLocation = newLocation;
-	}
-	
-	AppDelegate *foo = (AppDelegate *) [[UIApplication sharedApplication] delegate];
-	
-	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
-	{
-		NSDateFormatter *fmt	= [[NSDateFormatter alloc] init];
-		[fmt setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
-		
-		NSString *fooMessage	= [NSString stringWithFormat:
-								@"%@ (%@) :: Speed: %d.  Accuracy: %d.  Heading: %d.  ds: %f.  dt: %f.",
-								device,
-								[fmt stringFromDate:[NSDate date]],
-								(int) speed,
-								(int) [newLocation horizontalAccuracy],
-								(int) manager.heading.trueHeading,
-								[newLocation distanceFromLocation:_oldLocation],
-								[newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp]
-								];
-		
-		[foo fooWithFoo:fooMessage];
-	}
-	
-	if(speed > kMinimumDrivingSpeed && !recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire)
-	{
-		NSString *alertString = [NSString stringWithFormat:@"You appear to be driving about %d mph!  Please start recording now.", (int) speed];
 		
 		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 		{
+			NSDateFormatter *fmt	= [[NSDateFormatter alloc] init];
+			[fmt setDateFormat:@"MM-dd HH:mm"];
+			
+			NSString *fooMessage	= [NSString stringWithFormat:
+									   @"%@ (%@) :: Speed: %d.  Accuracy: %d. ds: %d. dt: %d.",
+									   device,
+									   [fmt stringFromDate:[NSDate date]],
+									   (int) speed,
+									   (int) [newLocation horizontalAccuracy],
+									   (int) ds,
+									   (int) dt
+									   ];
+			
+			[foo fooWithFoo:fooMessage];
+		}
+		
+		// Update location regardless of dt
+		oldLocation = newLocation;
+	}
+	
+	if(speed > kMinimumDrivingSpeed && !recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire && !tagMenu)
+	{
+		NSString *alertString = @"You appear to be driving!  If you are, please start recording.";
+		
+		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+		{
+			[foo fooWithFoo:[NSString stringWithFormat:@"Alerting driver in background.  Speed: %d", (int) speed]];
+			
 			// Alert the user from the background that they need to record
 			bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
 				[[UIApplication sharedApplication] endBackgroundTask:bgTask];
@@ -557,6 +564,29 @@ double const	kMapSpanDelta			= 0.005;
 	
 	if(trackingUser)
 		[self centerMapOnLocation:newLocation];
+	
+	// Check for danger tags
+	if(!didGetDangerTags && [self isValidLocation:newLocation])
+	{
+		NSLog(@":: Making a request for danger tags.");
+		
+		NSDate				*date		= [NSDate date];
+		NSDateFormatter		*formatter	= [[NSDateFormatter alloc] init];
+		
+		[formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+		NSString *dateString = [formatter stringFromDate:date];
+		
+		NSString *postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f", device, dateString, newLocation.coordinate.latitude, newLocation.coordinate.longitude];
+		
+		NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/get_tags.php"]];
+		[request setHTTPMethod:@"POST"];
+		[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+		[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+		
+		dangerTagsData			= [[NSMutableData alloc] init];
+		dangerTagsConnection	= [[NSURLConnection alloc] initWithRequest:request delegate:self];
+		didGetDangerTags		= YES;
+	}
 }
 
 // Handle callout button touches
@@ -595,17 +625,18 @@ double const	kMapSpanDelta			= 0.005;
 	annotationView.enabled			= YES;
 	annotationView.canShowCallout	= YES;
 	
+	MapTag *tmp = (MapTag *) annotation;
+	annotationView.animatesDrop = tmp.animateDrop;
+	
 	if(isDangerTag)
 	{
 		// Danger tags are red and appear instantly
 		annotationView.pinColor		= MKPinAnnotationColorRed;
-		annotationView.animatesDrop	= NO;
 	}
 	else
 	{
 		// Map tags are green and animate dropping in
 		annotationView.pinColor		= MKPinAnnotationColorGreen;
-		annotationView.animatesDrop	= YES;
 		
 		// Add a button to allow users to tag this pin as a dangerous zone
 		UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
@@ -628,8 +659,10 @@ double const	kMapSpanDelta			= 0.005;
 	[self.view addSubview:(UIView *)tagMenuBackground];
 	
 	// Set up the tag menu
-	if(title)
+	if(title && view)
 		tagMenu = [[TagMenuViewController alloc] initWithTitle:title];
+	else if(title)
+		tagMenu = [[TagMenuViewController alloc] initWithTitle:title withUpload:YES];
 	else
 		tagMenu = [[TagMenuViewController alloc] init];
 	
@@ -673,6 +706,68 @@ double const	kMapSpanDelta			= 0.005;
 	
 	// Free data from the menu itself
 	tagMenu = nil;
+}
+
+/*******************************
+ * Server/Connection functions *
+ *******************************/
+
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
+{
+	if(connection == dangerTagsConnection)
+	{
+		[dangerTagsData setLength:0];
+	}
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
+{
+	if(connection == dangerTagsConnection)
+	{
+		[dangerTagsData appendData:data];
+	}
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection
+{
+	if(connection == dangerTagsConnection)
+	{
+		NSLog(@":: Danger tags received from server.");
+		
+		NSArray *dangerTags = [[NSJSONSerialization JSONObjectWithData:dangerTagsData options:kNilOptions error:nil] objectForKey:@"danger_tags"];
+		
+		for(int i = 0; i < [dangerTags count]; i++)
+		{
+			NSDictionary *item = [dangerTags objectAtIndex:i];
+			CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([[item objectForKey:@"latitude"] floatValue], [[item objectForKey:@"longitude"] floatValue]);
+			NSString *subtitle;
+			
+			BOOL roadConditions	= [[item objectForKey:@"roadConditions"] intValue];
+			BOOL traffic		= [[item objectForKey:@"traffic"] intValue];
+			BOOL isSafe			= NO;
+			
+			if(roadConditions && traffic)
+				subtitle = @"Dangerous traffic and road conditions";
+			else if(roadConditions)
+				subtitle = @"Dangerous road conditions";
+			else if(traffic)
+				subtitle = @"Dangerous traffic conditions";
+			else
+				isSafe = YES;
+			
+			if(!isSafe)
+			{
+				DangerTag *tag = [[DangerTag alloc] initWithName:@"Dangerous Zone" address:subtitle coordinate:coordinate];
+				tag.animateDrop = YES;
+				[mapView addAnnotation:tag];
+			}
+		}
+		
+		
+		// Get rid of the old data
+		dangerTagsConnection	= nil;
+		dangerTagsData			= nil;
+	}
 }
 
 /*****************************
@@ -724,9 +819,6 @@ double const	kMapSpanDelta			= 0.005;
 		// Update button color to green
 		[startButton setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
 		
-		// Update numRows
-		[self updateData];
-		
 		// Stop recording
 		[ticker invalidate];
 		ticker = nil;
@@ -763,14 +855,6 @@ double const	kMapSpanDelta			= 0.005;
 			break;
 		}
 	}
-}
-
-// Action received when the upload button is touched
-- (IBAction)uploadButtonWasTouched:(id)sender
-{
-	// Upload rows, if there are rows to upload
-	if([self numRows] > 0)
-		[self uploadRows];
 }
 
 // Enable gesture recognition
@@ -849,7 +933,6 @@ double const	kMapSpanDelta			= 0.005;
 		battery = @"Unknown";
 	
 	[self insertRowWithAccelorometer:accel andSound:sound andGps:gps andCompass:compass andBattery:battery];
-	[self updateData];
 }
 
 /********************
@@ -897,13 +980,9 @@ double const	kMapSpanDelta			= 0.005;
 	// Set button labels
 	[startButton	setTitle:@"Record"		forState:UIControlStateNormal];
 	[startButton	setTitle:@"Stop"		forState:UIControlStateSelected];
-	[uploadButton	setTitle:@"Upload"		forState:UIControlStateNormal];
 	
 	// Set button colors
 	[startButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.6f blue:0.1f alpha:1.0f]];
-	[uploadButton	setBackgroundColor: [UIColor colorWithRed:0.1f green:0.1f blue:0.6f alpha:1.0f]];
-	
-	[self updateData];
 	
 	// Set device ID
 	device = @"Unknown";
@@ -999,7 +1078,6 @@ double const	kMapSpanDelta			= 0.005;
     [super viewDidUnload];
     
 	self.startButton			= nil;
-	self.uploadButton			= nil;
 	self.tagButton				= nil;
 	self.speedometer			= nil;
 	self.dbpath					= nil;
@@ -1015,6 +1093,8 @@ double const	kMapSpanDelta			= 0.005;
 	self.lastAlertedUser		= nil;
 	self.tagMenu				= nil;
 	self.tagMenuBackground		= nil;
+	self.dangerTagsConnection	= nil;
+	self.dangerTagsData			= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated
