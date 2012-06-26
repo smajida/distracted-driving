@@ -7,7 +7,6 @@
 //
 
 #import "AppDelegate.h"
-
 #import "ViewController.h"
 
 @implementation AppDelegate
@@ -18,6 +17,9 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+	[TestFlight setDeviceIdentifier:[[UIDevice currentDevice] uniqueIdentifier]];
+	[TestFlight takeOff:@"6ab119d7ecfdf82ed74673d4b42400ec_MTAxNDI3MjAxMi0wNi0yMiAyMjowMDo1NS4wMjczNjI"];
+	
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
 	
     // Override point for customization after application launch.

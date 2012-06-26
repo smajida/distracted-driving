@@ -44,7 +44,7 @@
 					<object class="IBUIButton" id="543299255">
 						<reference key="NSNextResponder" ref="774585933"/>
 						<int key="NSvFlags">270</int>
-						<string key="NSFrame">{{20, 393}, {125, 37}}</string>
+						<string key="NSFrame">{{20, 393}, {80, 37}}</string>
 						<reference key="NSSuperview" ref="774585933"/>
 						<reference key="NSWindow"/>
 						<reference key="NSNextKeyView" ref="394538218"/>
@@ -96,10 +96,10 @@
 					<object class="IBUIButton" id="394538218">
 						<reference key="NSNextResponder" ref="774585933"/>
 						<int key="NSvFlags">271</int>
-						<string key="NSFrame">{{175, 393}, {125, 37}}</string>
+						<string key="NSFrame">{{120, 393}, {80, 37}}</string>
 						<reference key="NSSuperview" ref="774585933"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView"/>
+						<reference key="NSNextKeyView" ref="863810508"/>
 						<string key="NSReuseIdentifierKey">_NS:9</string>
 						<object class="NSColor" key="IBUIBackgroundColor">
 							<int key="NSColorSpace">1</int>
@@ -110,6 +110,29 @@
 						<int key="IBUIContentHorizontalAlignment">0</int>
 						<int key="IBUIContentVerticalAlignment">0</int>
 						<string key="IBUINormalTitle">Tag</string>
+						<reference key="IBUIHighlightedTitleColor" ref="235250316"/>
+						<reference key="IBUINormalTitleColor" ref="414205608"/>
+						<reference key="IBUINormalTitleShadowColor" ref="47307018"/>
+						<reference key="IBUIFontDescription" ref="115026782"/>
+						<reference key="IBUIFont" ref="308661127"/>
+					</object>
+					<object class="IBUIButton" id="863810508">
+						<reference key="NSNextResponder" ref="774585933"/>
+						<int key="NSvFlags">271</int>
+						<string key="NSFrame">{{220, 393}, {80, 37}}</string>
+						<reference key="NSSuperview" ref="774585933"/>
+						<reference key="NSWindow"/>
+						<reference key="NSNextKeyView"/>
+						<string key="NSReuseIdentifierKey">_NS:9</string>
+						<object class="NSColor" key="IBUIBackgroundColor">
+							<int key="NSColorSpace">1</int>
+							<bytes key="NSRGB">MSAwLjUgMAA</bytes>
+						</object>
+						<bool key="IBUIOpaque">NO</bool>
+						<string key="targetRuntimeIdentifier">IBCocoaTouchFramework</string>
+						<int key="IBUIContentHorizontalAlignment">0</int>
+						<int key="IBUIContentVerticalAlignment">0</int>
+						<string key="IBUINormalTitle">Feedback</string>
 						<reference key="IBUIHighlightedTitleColor" ref="235250316"/>
 						<reference key="IBUINormalTitleColor" ref="414205608"/>
 						<reference key="IBUINormalTitleShadowColor" ref="47307018"/>
@@ -227,6 +250,15 @@
 					</object>
 					<int key="connectionID">37</int>
 				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchEventConnection" key="connection">
+						<string key="label">feedbackButtonWasTouched:</string>
+						<reference key="source" ref="863810508"/>
+						<reference key="destination" ref="372490531"/>
+						<int key="IBEventType">7</int>
+					</object>
+					<int key="connectionID">43</int>
+				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
 				<object class="NSArray" key="orderedObjects">
@@ -259,6 +291,7 @@
 							<reference ref="162847997"/>
 							<reference ref="543299255"/>
 							<reference ref="394538218"/>
+							<reference ref="863810508"/>
 						</object>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -282,6 +315,11 @@
 						<reference key="object" ref="162847997"/>
 						<reference key="parent" ref="774585933"/>
 					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">41</int>
+						<reference key="object" ref="863810508"/>
+						<reference key="parent" ref="774585933"/>
+					</object>
 				</object>
 			</object>
 			<object class="NSMutableDictionary" key="flattenedProperties">
@@ -296,6 +334,8 @@
 					<string>26.CustomClassName</string>
 					<string>26.IBPluginDependency</string>
 					<string>34.IBPluginDependency</string>
+					<string>41.CustomClassName</string>
+					<string>41.IBPluginDependency</string>
 					<string>6.IBPluginDependency</string>
 					<string>9.CustomClassName</string>
 					<string>9.IBPluginDependency</string>
@@ -310,6 +350,8 @@
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>GradientButton</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
+					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
+					<string>GradientButton</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>GradientButton</string>
@@ -329,7 +371,7 @@
 				<reference key="dict.values" ref="0"/>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">40</int>
+			<int key="maxID">43</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -349,9 +391,9 @@
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>feedbackButtonWasTouched:</string>
 							<string>startButtonWasTouched:</string>
 							<string>tagButtonWasTouched:</string>
-							<string>uploadButtonWasTouched:</string>
 						</object>
 						<object class="NSArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
@@ -364,22 +406,22 @@
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>feedbackButtonWasTouched:</string>
 							<string>startButtonWasTouched:</string>
 							<string>tagButtonWasTouched:</string>
-							<string>uploadButtonWasTouched:</string>
 						</object>
 						<object class="NSArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<object class="IBActionInfo">
+								<string key="name">feedbackButtonWasTouched:</string>
+								<string key="candidateClassName">id</string>
+							</object>
 							<object class="IBActionInfo">
 								<string key="name">startButtonWasTouched:</string>
 								<string key="candidateClassName">id</string>
 							</object>
 							<object class="IBActionInfo">
 								<string key="name">tagButtonWasTouched:</string>
-								<string key="candidateClassName">id</string>
-							</object>
-							<object class="IBActionInfo">
-								<string key="name">uploadButtonWasTouched:</string>
 								<string key="candidateClassName">id</string>
 							</object>
 						</object>
@@ -392,13 +434,11 @@
 							<string>speedometer</string>
 							<string>startButton</string>
 							<string>tagButton</string>
-							<string>uploadButton</string>
 						</object>
 						<object class="NSArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
 							<string>MKMapView</string>
 							<string>UILabel</string>
-							<string>GradientButton</string>
 							<string>GradientButton</string>
 							<string>GradientButton</string>
 						</object>
@@ -411,7 +451,6 @@
 							<string>speedometer</string>
 							<string>startButton</string>
 							<string>tagButton</string>
-							<string>uploadButton</string>
 						</object>
 						<object class="NSArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
@@ -429,10 +468,6 @@
 							</object>
 							<object class="IBToOneOutletInfo">
 								<string key="name">tagButton</string>
-								<string key="candidateClassName">GradientButton</string>
-							</object>
-							<object class="IBToOneOutletInfo">
-								<string key="name">uploadButton</string>
 								<string key="candidateClassName">GradientButton</string>
 							</object>
 						</object>

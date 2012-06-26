@@ -118,6 +118,7 @@ extern double const kMapSpanDelta;
 - (void)panHappened:(UIGestureRecognizer *)gestureRecognizer;
 - (IBAction)startButtonWasTouched:(id)sender;
 - (IBAction)tagButtonWasTouched:(id)sender;
+- (IBAction)feedbackButtonWasTouched:(id)sender;
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
 // Ticking functions

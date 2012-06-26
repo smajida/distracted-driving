@@ -38,6 +38,10 @@
 		A3BD62241566BBDE00CE3DFD /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3BD62231566BBDE00CE3DFD /* CoreAudio.framework */; };
 		A3BD62261566BC0800CE3DFD /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3BD62251566BC0800CE3DFD /* AVFoundation.framework */; };
 		A3D9F75B1564BB9A00F5F24F /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D9F75A1564BB9A00F5F24F /* libsqlite3.dylib */; };
+		A3E168D2159A335900A94318 /* libTestFlight.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A3E168CE159A335900A94318 /* libTestFlight.a */; };
+		A3E168D3159A335900A94318 /* README.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3E168CF159A335900A94318 /* README.txt */; };
+		A3E168D4159A335900A94318 /* release_notes.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3E168D0159A335900A94318 /* release_notes.txt */; };
+		A3E168D7159A33B400A94318 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A3E168D6159A33B400A94318 /* libz.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,6 +95,11 @@
 		A3BD62231566BBDE00CE3DFD /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		A3BD62251566BC0800CE3DFD /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		A3D9F75A1564BB9A00F5F24F /* libsqlite3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = usr/lib/libsqlite3.dylib; sourceTree = SDKROOT; };
+		A3E168CE159A335900A94318 /* libTestFlight.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libTestFlight.a; sourceTree = "<group>"; };
+		A3E168CF159A335900A94318 /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		A3E168D0159A335900A94318 /* release_notes.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = release_notes.txt; sourceTree = "<group>"; };
+		A3E168D1159A335900A94318 /* TestFlight.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestFlight.h; sourceTree = "<group>"; };
+		A3E168D6159A33B400A94318 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,9 +115,11 @@
 				A3BD62261566BC0800CE3DFD /* AVFoundation.framework in Frameworks */,
 				A3BD62241566BBDE00CE3DFD /* CoreAudio.framework in Frameworks */,
 				A3BD62211566B12200CE3DFD /* CoreLocation.framework in Frameworks */,
-				A3D9F75B1564BB9A00F5F24F /* libsqlite3.dylib in Frameworks */,
 				A3665D861561FAC7000E3AF2 /* UIKit.framework in Frameworks */,
 				A3665D881561FAC7000E3AF2 /* Foundation.framework in Frameworks */,
+				A3D9F75B1564BB9A00F5F24F /* libsqlite3.dylib in Frameworks */,
+				A3E168D7159A33B400A94318 /* libz.dylib in Frameworks */,
+				A3E168D2159A335900A94318 /* libTestFlight.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,13 +187,14 @@
 				A32F0B681577DDA30055FF27 /* GradientButton.m */,
 				A32F0B6F157804040055FF27 /* MapTag.h */,
 				A32F0B70157804040055FF27 /* MapTag.m */,
-				A3665D8A1561FAC7000E3AF2 /* Supporting Files */,
 				A33F2F78158D86260041EDBF /* TagMenuView.xib */,
 				A33F2F84158D91A60041EDBF /* TagMenuViewController.h */,
 				A33F2F85158D91A60041EDBF /* TagMenuViewController.m */,
 				A3665D951561FAC7000E3AF2 /* ViewController.h */,
 				A3665D961561FAC7000E3AF2 /* ViewController.m */,
 				A3665D981561FAC7000E3AF2 /* ViewController.xib */,
+				A3E168CD159A335900A94318 /* TestFlightSDK1 */,
+				A3665D8A1561FAC7000E3AF2 /* Supporting Files */,
 			);
 			path = "distracted-driving";
 			sourceTree = "<group>";
@@ -217,6 +229,19 @@
 				A3665DAA1561FAC7000E3AF2 /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		A3E168CD159A335900A94318 /* TestFlightSDK1 */ = {
+			isa = PBXGroup;
+			children = (
+				A3E168D6159A33B400A94318 /* libz.dylib */,
+				A3E168CE159A335900A94318 /* libTestFlight.a */,
+				A3E168CF159A335900A94318 /* README.txt */,
+				A3E168D0159A335900A94318 /* release_notes.txt */,
+				A3E168D1159A335900A94318 /* TestFlight.h */,
+			);
+			name = TestFlightSDK1;
+			path = ../TestFlightSDK1;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -298,6 +323,8 @@
 				A33F2F7A158D86260041EDBF /* TagMenuView.xib in Resources */,
 				A33F2F7D158D886A0041EDBF /* alert_background.png in Resources */,
 				A33F2F7E158D886A0041EDBF /* behind_alert_view.png in Resources */,
+				A3E168D3159A335900A94318 /* README.txt in Resources */,
+				A3E168D4159A335900A94318 /* release_notes.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -411,6 +438,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
 				PROVISIONING_PROFILE = "90ADBC5C-06AA-4E46-8744-F701A64E26DA";
 				SDKROOT = iphoneos;
+				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Debug;
 		};
@@ -422,7 +450,7 @@
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer: Luke Godfrey (J65FEVU6WL)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
@@ -432,6 +460,7 @@
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				PROVISIONING_PROFILE = "90ADBC5C-06AA-4E46-8744-F701A64E26DA";
 				SDKROOT = iphoneos;
+				STRIP_INSTALLED_PRODUCT = NO;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -443,6 +472,10 @@
 				GCC_PREFIX_HEADER = "distracted-driving/distracted-driving-Prefix.pch";
 				INFOPLIST_FILE = "distracted-driving/distracted-driving-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/TestFlightSDK1\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -455,6 +488,10 @@
 				GCC_PREFIX_HEADER = "distracted-driving/distracted-driving-Prefix.pch";
 				INFOPLIST_FILE = "distracted-driving/distracted-driving-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/TestFlightSDK1\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};

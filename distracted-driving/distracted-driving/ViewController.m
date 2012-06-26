@@ -444,7 +444,10 @@ double const	kMapSpanDelta			= 0.005;
 		
 		// Make a new annotation (DangerTag)
 		if(!isSafe)
+		{
+			[TestFlight passCheckpoint:@"Tagged an area as dangerous."];
 			[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:subtitle coordinate:view.annotation.coordinate]];
+		}
 		
 		// Remove the annotation
 		[mapView removeAnnotation:view.annotation];
@@ -794,6 +797,8 @@ double const	kMapSpanDelta			= 0.005;
 // Action received when the start/stop button is touched
 - (IBAction)startButtonWasTouched:(id)sender
 {
+	[TestFlight passCheckpoint:@"Started recording data."];
+	
 	startButton.selected = !startButton.selected;
 	
 	if(startButton.selected)
@@ -855,6 +860,11 @@ double const	kMapSpanDelta			= 0.005;
 			break;
 		}
 	}
+}
+
+- (IBAction)feedbackButtonWasTouched:(id)sender
+{
+	[TestFlight openFeedbackView];
 }
 
 // Enable gesture recognition
