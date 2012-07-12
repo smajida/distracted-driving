@@ -21,7 +21,7 @@ double const	kMapSpanDelta			= 0.005;
 @synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, dangerTagsData, dangerTagsConnection;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges;
 
 /**************************
  * Initializing functions *
@@ -392,16 +392,6 @@ double const	kMapSpanDelta			= 0.005;
 	return YES;
 }
 
-// Shortcut to the automatic centering function
-- (void)centerMapOnLocation:(CLLocation *)location
-{
-	if([self isValidLocation:location])
-	{
-		[mapView setCenterCoordinate:location.coordinate animated:YES];
-		lastCenteredLocation = location;
-	}
-}
-
 // Drop a maptag at the given location
 - (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate
 {
@@ -409,11 +399,15 @@ double const	kMapSpanDelta			= 0.005;
 }
 
 // Finish a location tag
-- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions
+- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal
 {
 	NSMutableURLRequest	*request;
 	NSURLConnection		*connection;
 	NSString			*postString, *dateString;
+	
+	// If signal, road/traffic conditions must be ignored
+	if(signal)
+		roadConditions = traffic = NO;
 	
 	// Get the date
 	NSDate				*date		= [NSDate date];
@@ -428,10 +422,12 @@ double const	kMapSpanDelta			= 0.005;
 	if(view)
 	{
 		// Specifically tagged location
-		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&trip=0", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions];
+		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&signal=%d&trip=0", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions, signal];
 		
-		NSString *subtitle;
+		NSString *title, *subtitle;
 		BOOL isSafe = NO;
+		
+		title = @"Dangerous Zone";
 		
 		if(roadConditions && traffic)
 			subtitle = @"Dangerous traffic and road conditions";
@@ -439,6 +435,11 @@ double const	kMapSpanDelta			= 0.005;
 			subtitle = @"Dangerous road conditions";
 		else if(traffic)
 			subtitle = @"Dangerous traffic conditions";
+		else if(signal)
+		{
+			title		= @"Traffic Signal";
+			subtitle	= nil;
+		}
 		else
 			isSafe = YES;
 		
@@ -446,7 +447,7 @@ double const	kMapSpanDelta			= 0.005;
 		if(!isSafe)
 		{
 			[TestFlight passCheckpoint:@"Tagged an area as dangerous."];
-			[mapView addAnnotation:[[DangerTag alloc] initWithName:@"Dangerous Zone" address:subtitle coordinate:view.annotation.coordinate]];
+			[mapView addAnnotation:[[DangerTag alloc] initWithName:title address:subtitle coordinate:view.annotation.coordinate]];
 		}
 		
 		// Remove the annotation
@@ -455,7 +456,7 @@ double const	kMapSpanDelta			= 0.005;
 	else
 	{
 		// Trip tag
-		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&trip=1", device, dateString, locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, traffic, roadConditions];
+		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&signal=0&trip=1", device, dateString, locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, traffic, roadConditions];
 	}
 	
 	[request setHTTPMethod:@"POST"];
@@ -473,8 +474,7 @@ double const	kMapSpanDelta			= 0.005;
 // Start following the user if they move far enough
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation
 {
-	AppDelegate *foo = (AppDelegate *) [[UIApplication sharedApplication] delegate];
-	float ds = [newLocation distanceFromLocation:_oldLocation];
+	// float ds = [newLocation distanceFromLocation:_oldLocation];
 	float dt = [newLocation.timestamp timeIntervalSinceDate:_oldLocation.timestamp];
 	
 	// Update the speed
@@ -506,24 +506,6 @@ double const	kMapSpanDelta			= 0.005;
 			[self calculateSpeed];
 		}
 		
-		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
-		{
-			NSDateFormatter *fmt	= [[NSDateFormatter alloc] init];
-			[fmt setDateFormat:@"MM-dd HH:mm"];
-			
-			NSString *fooMessage	= [NSString stringWithFormat:
-									   @"%@ (%@) :: Speed: %d.  Accuracy: %d. ds: %d. dt: %d.",
-									   device,
-									   [fmt stringFromDate:[NSDate date]],
-									   (int) speed,
-									   (int) [newLocation horizontalAccuracy],
-									   (int) ds,
-									   (int) dt
-									   ];
-			
-			[foo fooWithFoo:fooMessage];
-		}
-		
 		// Update location regardless of dt
 		oldLocation = newLocation;
 	}
@@ -534,7 +516,7 @@ double const	kMapSpanDelta			= 0.005;
 		
 		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 		{
-			[foo fooWithFoo:[NSString stringWithFormat:@"Alerting driver in background.  Speed: %d", (int) speed]];
+			[TestFlight passCheckpoint:@"Notified user in background."];
 			
 			// Alert the user from the background that they need to record
 			bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
@@ -563,10 +545,10 @@ double const	kMapSpanDelta			= 0.005;
 	
 	// Check distance not from the last location but from the last centered location
 	if(!trackingUser && [self isValidLocation:newLocation] && [newLocation distanceFromLocation:lastCenteredLocation] > 100)
+	{
 		trackingUser = YES;
-	
-	if(trackingUser)
-		[self centerMapOnLocation:newLocation];
+		[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
+	}
 	
 	// Check for danger tags
 	if(!didGetDangerTags && [self isValidLocation:newLocation])
@@ -589,6 +571,13 @@ double const	kMapSpanDelta			= 0.005;
 		dangerTagsData			= [[NSMutableData alloc] init];
 		dangerTagsConnection	= [[NSURLConnection alloc] initWithRequest:request delegate:self];
 		didGetDangerTags		= YES;
+	}
+	
+	// Record the data if in background
+	if(recording && [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+	{
+		NSLog(@"recording in background");
+		[self record:self];
 	}
 }
 
@@ -743,11 +732,14 @@ double const	kMapSpanDelta			= 0.005;
 		{
 			NSDictionary *item = [dangerTags objectAtIndex:i];
 			CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([[item objectForKey:@"latitude"] floatValue], [[item objectForKey:@"longitude"] floatValue]);
-			NSString *subtitle;
+			NSString *title, *subtitle;
 			
 			BOOL roadConditions	= [[item objectForKey:@"roadConditions"] intValue];
 			BOOL traffic		= [[item objectForKey:@"traffic"] intValue];
+			BOOL signal			= [[item objectForKey:@"signal"] intValue];
 			BOOL isSafe			= NO;
+			
+			title = @"Dangerous Zone";
 			
 			if(roadConditions && traffic)
 				subtitle = @"Dangerous traffic and road conditions";
@@ -755,12 +747,17 @@ double const	kMapSpanDelta			= 0.005;
 				subtitle = @"Dangerous road conditions";
 			else if(traffic)
 				subtitle = @"Dangerous traffic conditions";
+			else if(signal)
+			{
+				title		= @"Traffic Signal";
+				subtitle	= nil;
+			}
 			else
 				isSafe = YES;
 			
 			if(!isSafe)
 			{
-				DangerTag *tag = [[DangerTag alloc] initWithName:@"Dangerous Zone" address:subtitle coordinate:coordinate];
+				DangerTag *tag = [[DangerTag alloc] initWithName:title address:subtitle coordinate:coordinate];
 				tag.animateDrop = YES;
 				[mapView addAnnotation:tag];
 			}
@@ -792,6 +789,8 @@ double const	kMapSpanDelta			= 0.005;
 {
 	// If the user pans the screen, stop tracking
 	trackingUser = NO;
+	lastCenteredLocation = [mapView userLocation].location;
+	[mapView setUserTrackingMode:MKUserTrackingModeNone];
 }
 
 // Action received when the start/stop button is touched
@@ -809,10 +808,6 @@ double const	kMapSpanDelta			= 0.005;
 		// Update button color to red
 		[startButton setBackgroundColor: [UIColor colorWithRed:0.6f green:0.1f blue:0.1f alpha:1.0f]];
 		
-		// End the non-recording ticker
-		[ticker invalidate];
-		ticker = nil;
-		
 		// Start recording
 		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(record:) userInfo:nil repeats:YES];
 	}
@@ -828,9 +823,6 @@ double const	kMapSpanDelta			= 0.005;
 		[ticker invalidate];
 		ticker = nil;
 		
-		// Start non-recording ticker
-		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
-		
 		// Reset the alert
 		lastAlertedUser = [NSDate dateWithTimeIntervalSince1970:0];
 		
@@ -843,7 +835,7 @@ double const	kMapSpanDelta			= 0.005;
 - (IBAction)tagButtonWasTouched:(id)sender
 {
 	// Center the map first
-	[self centerMapOnLocation:locationManager.location];
+	[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
 	
 	// Drop a pin at the current location
 	[self dropPinAtCoordinate:locationManager.location.coordinate];
@@ -876,13 +868,6 @@ double const	kMapSpanDelta			= 0.005;
 /*********************
  * Ticking functions *
  *********************/
-
-// The tick when not recording data
-- (void)monitorWhileNotRecording:(id)sender
-{
-	// Average the speed
-	// [self calculateSpeed];
-}
 
 // The tick when recording data
 - (void)record:(id)sender
@@ -1008,6 +993,8 @@ double const	kMapSpanDelta			= 0.005;
 	speedValues = [[NSMutableArray alloc] init];
 	
 	// Set up GPS
+	isUsingOnlySignificantChanges	= NO;
+	
 	locationManager					= [[CLLocationManager alloc] init];
 	locationManager.delegate		= self;
 	locationManager.distanceFilter	= kCLDistanceFilterNone;
@@ -1026,6 +1013,7 @@ double const	kMapSpanDelta			= 0.005;
 	[mapView addGestureRecognizer:longPress];
 	[mapView addGestureRecognizer:pan];
 	[mapView setDelegate:self];
+	[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
 	
 	// Temporary variables
 	MKCoordinateRegion		region;
@@ -1078,9 +1066,6 @@ double const	kMapSpanDelta			= 0.005;
 			[recorder record];
 		}
 	}
-	
-	// Start monitoring ticker
-	ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(monitorWhileNotRecording:) userInfo:nil repeats:YES];
 }
 
 - (void)viewDidUnload

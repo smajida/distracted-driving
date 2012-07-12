@@ -49,7 +49,7 @@ extern double const kMapSpanDelta;
 	UIBackgroundTaskIdentifier	bgTask;
 	int							accelValuesCollected;
 	float						accelX, accelY, accelZ, speed, thrownAwaySpeed;
-	BOOL						recording, trackingUser, didGetDangerTags;
+	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges;
 }
 
 @property (nonatomic, retain) TagMenuViewController			*tagMenu;
@@ -72,7 +72,7 @@ extern double const kMapSpanDelta;
 @property (nonatomic, assign) UIBackgroundTaskIdentifier	bgTask;
 @property (nonatomic, assign) int							accelValuesCollected;
 @property (nonatomic, assign) float							accelX, accelY, accelZ, speed, thrownAwaySpeed;
-@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags;
+@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges;
 
 // Initializing functions
 - (BOOL)sqlcon;
@@ -99,9 +99,8 @@ extern double const kMapSpanDelta;
 
 // Location functions
 - (BOOL)isValidLocation:(CLLocation *)newLocation;
-- (void)centerMapOnLocation:(CLLocation *)location;
 - (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate;
-- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions;
+- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control;
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation;
@@ -122,7 +121,6 @@ extern double const kMapSpanDelta;
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
 // Ticking functions
-- (void)monitorWhileNotRecording:(id)sender;
 - (void)record:(id)sender;
 
 @end

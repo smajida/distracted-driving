@@ -13,7 +13,7 @@
 @protocol TagMenuDelegate <NSObject>
 @required
 
-- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions;
+- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal;
 - (void)tagMenuDidClose;
 - (void)uploadRows;
 
@@ -23,9 +23,8 @@
 {
 	id <TagMenuDelegate>	delegate;
 	MKAnnotationView		*annotationView;
-	UILabel					*titleLabel;
-	UISwitch				*roadSwitch;
-	UISwitch				*trafficSwitch;
+	UILabel					*titleLabel, *signalLabel;
+	UISwitch				*roadSwitch, *trafficSwitch, *signalSwitch;
 	UIButton				*tagButton, *cancelButton, *uploadButton;
 	NSString				*titleText;
 	BOOL					isUploadType;
@@ -33,8 +32,8 @@
 
 @property (nonatomic, retain) id <TagMenuDelegate>	delegate;
 @property (nonatomic, retain) MKAnnotationView		*annotationView;
-@property (nonatomic, retain) IBOutlet UILabel		*titleLabel;
-@property (nonatomic, retain) IBOutlet UISwitch		*roadSwitch, *trafficSwitch;
+@property (nonatomic, retain) IBOutlet UILabel		*titleLabel, *signalLabel;
+@property (nonatomic, retain) IBOutlet UISwitch		*roadSwitch, *trafficSwitch, *signalSwitch;
 @property (nonatomic, retain) IBOutlet UIButton		*tagButton, *cancelButton, *uploadButton;
 @property (nonatomic, retain) NSString				*titleText;
 @property (nonatomic, assign) BOOL					isUploadType;

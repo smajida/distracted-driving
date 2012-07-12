@@ -10,7 +10,7 @@
 
 @implementation TagMenuViewController
 
-@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, tagButton, cancelButton, uploadButton, titleText, isUploadType;
+@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, signalLabel, signalSwitch, tagButton, cancelButton, uploadButton, titleText, isUploadType;
 
 - (id)initWithTitle:(NSString *)text withUpload:(BOOL)upload
 {
@@ -49,9 +49,9 @@
 - (IBAction)closeAndTag:(id)sender
 {
 	if(delegate && annotationView)
-		[delegate tagViewAsDangerous:annotationView withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on];
+		[delegate tagViewAsDangerous:annotationView withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on andSignal:signalSwitch.on];
 	else if(delegate && !annotationView)
-		[delegate tagViewAsDangerous:nil withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on];
+		[delegate tagViewAsDangerous:nil withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on andSignal:signalSwitch.on];
 	
 	[self close:sender];
 }
@@ -74,6 +74,8 @@
 	{
 		tagButton.hidden	= YES;
 		cancelButton.hidden	= YES;
+		signalSwitch.hidden	= YES;
+		signalLabel.hidden	= YES;
 	}
 	else
 		uploadButton.hidden	= YES;
@@ -87,6 +89,8 @@
 	self.roadSwitch		= nil;
 	self.trafficSwitch	= nil;
 	self.titleText		= nil;
+	self.signalLabel	= nil;
+	self.signalSwitch	= nil;
 }
 
 - (void)didReceiveMemoryWarning

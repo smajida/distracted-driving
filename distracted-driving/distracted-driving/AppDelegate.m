@@ -35,30 +35,9 @@
 	
 	// Check if the app has been woken up from the background
 	if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
-	{
-		[self fooWithFoo:@"launched from locations"];
-	}
-	else
-		[self fooWithFoo:@"launched normally"];
+		[TestFlight passCheckpoint:@"Launched from Location Services"];
 	
     return YES;
-}
-
-- (void)fooWithFoo:(NSString *)foo
-{
-	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/test.php"]];
-	[request setHTTPMethod:@"POST"];
-	
-	NSString *postString = [NSString stringWithFormat:@"foo=%@", foo];
-	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
-	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
-	
-	NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-	
-	if(connection)
-	{
-		// NSLog(@"Foo!");
-	}
 }
 
 - (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
@@ -131,8 +110,14 @@
 	 If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
 	 */
 	 
-	 // Monitor significant changes
-	 [self.viewController.locationManager startMonitoringSignificantLocationChanges];
+	 // Only monitor significant changes – unless recording
+	 if(!self.viewController.recording)
+	 {
+		 self.viewController.isUsingOnlySignificantChanges = YES;
+		 
+		 [self.viewController.locationManager stopUpdatingLocation];
+		 [self.viewController.locationManager startMonitoringSignificantLocationChanges];
+	 }
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application
@@ -147,9 +132,11 @@
 	/*
 	 Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
 	 */
-
-	// Stop monitoring significant changes
+	
+	self.viewController.isUsingOnlySignificantChanges = NO;
+	
 	[self.viewController.locationManager stopMonitoringSignificantLocationChanges];
+	[self.viewController.locationManager startUpdatingLocation];
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application

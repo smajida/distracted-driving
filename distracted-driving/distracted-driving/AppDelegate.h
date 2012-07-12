@@ -20,6 +20,4 @@
 @property (strong, nonatomic) ViewController *viewController;
 @property (nonatomic, retain) NSString *device;
 
-- (void)fooWithFoo:(NSString *)foo;
-
 @end
