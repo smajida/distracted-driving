@@ -16,6 +16,8 @@
 		A32F0B6C1577DEFC0055FF27 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32F0B6B1577DEFC0055FF27 /* QuartzCore.framework */; };
 		A32F0B6E1577FF900055FF27 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A32F0B6D1577FF900055FF27 /* MapKit.framework */; };
 		A32F0B71157804040055FF27 /* MapTag.m in Sources */ = {isa = PBXBuildFile; fileRef = A32F0B70157804040055FF27 /* MapTag.m */; };
+		A33F1F6115B475F2005CD0BF /* SettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A33F1F5F15B475F2005CD0BF /* SettingsViewController.m */; };
+		A33F1F6215B475F2005CD0BF /* SettingsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = A33F1F6015B475F2005CD0BF /* SettingsViewController.xib */; };
 		A33F2F7A158D86260041EDBF /* TagMenuView.xib in Resources */ = {isa = PBXBuildFile; fileRef = A33F2F78158D86260041EDBF /* TagMenuView.xib */; };
 		A33F2F7D158D886A0041EDBF /* alert_background.png in Resources */ = {isa = PBXBuildFile; fileRef = A33F2F7B158D886A0041EDBF /* alert_background.png */; };
 		A33F2F7E158D886A0041EDBF /* behind_alert_view.png in Resources */ = {isa = PBXBuildFile; fileRef = A33F2F7C158D886A0041EDBF /* behind_alert_view.png */; };
@@ -66,6 +68,9 @@
 		A32F0B6D1577FF900055FF27 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 		A32F0B6F157804040055FF27 /* MapTag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MapTag.h; sourceTree = "<group>"; };
 		A32F0B70157804040055FF27 /* MapTag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MapTag.m; sourceTree = "<group>"; };
+		A33F1F5E15B475F2005CD0BF /* SettingsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SettingsViewController.h; sourceTree = "<group>"; };
+		A33F1F5F15B475F2005CD0BF /* SettingsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SettingsViewController.m; sourceTree = "<group>"; };
+		A33F1F6015B475F2005CD0BF /* SettingsViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SettingsViewController.xib; sourceTree = "<group>"; };
 		A33F2F78158D86260041EDBF /* TagMenuView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = TagMenuView.xib; sourceTree = "<group>"; };
 		A33F2F7B158D886A0041EDBF /* alert_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = alert_background.png; sourceTree = "<group>"; };
 		A33F2F7C158D886A0041EDBF /* behind_alert_view.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = behind_alert_view.png; sourceTree = "<group>"; };
@@ -187,14 +192,17 @@
 				A32F0B681577DDA30055FF27 /* GradientButton.m */,
 				A32F0B6F157804040055FF27 /* MapTag.h */,
 				A32F0B70157804040055FF27 /* MapTag.m */,
+				A33F1F5E15B475F2005CD0BF /* SettingsViewController.h */,
+				A33F1F5F15B475F2005CD0BF /* SettingsViewController.m */,
+				A33F1F6015B475F2005CD0BF /* SettingsViewController.xib */,
 				A33F2F78158D86260041EDBF /* TagMenuView.xib */,
 				A33F2F84158D91A60041EDBF /* TagMenuViewController.h */,
 				A33F2F85158D91A60041EDBF /* TagMenuViewController.m */,
 				A3665D951561FAC7000E3AF2 /* ViewController.h */,
 				A3665D961561FAC7000E3AF2 /* ViewController.m */,
 				A3665D981561FAC7000E3AF2 /* ViewController.xib */,
-				A3E168CD159A335900A94318 /* TestFlightSDK1 */,
 				A3665D8A1561FAC7000E3AF2 /* Supporting Files */,
+				A3E168CD159A335900A94318 /* TestFlightSDK1 */,
 			);
 			path = "distracted-driving";
 			sourceTree = "<group>";
@@ -325,6 +333,7 @@
 				A33F2F7E158D886A0041EDBF /* behind_alert_view.png in Resources */,
 				A3E168D3159A335900A94318 /* README.txt in Resources */,
 				A3E168D4159A335900A94318 /* release_notes.txt in Resources */,
+				A33F1F6215B475F2005CD0BF /* SettingsViewController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -365,6 +374,7 @@
 				A32F0B691577DDA30055FF27 /* GradientButton.m in Sources */,
 				A32F0B71157804040055FF27 /* MapTag.m in Sources */,
 				A33F2F86158D91A60041EDBF /* TagMenuViewController.m in Sources */,
+				A33F1F6115B475F2005CD0BF /* SettingsViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

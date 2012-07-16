@@ -17,17 +17,21 @@
 #import "MapTag.h"
 #import "GradientButton.h"
 #import "TagMenuViewController.h"
+#import "SettingsViewController.h"
 #import "AppDelegate.h"
 
 // Settings (Constants)
 extern int const	kMinimumDrivingSpeed;
+extern float const	kTimeIntervalForTick;
+extern int const	kPauseInterval;
 extern int const	kDrasticSpeedChange;
+extern int const	kSignificantLocationChange;
 extern int const	kMaximumSpeedAge;
 extern int const	kDataPointsForAverage;
 extern int const	kAlertExpire;
 extern double const kMapSpanDelta;
 
-@interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate, TagMenuDelegate>
+@interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate, TagMenuDelegate, SettingsDelegate>
 {
 	TagMenuViewController		*tagMenu;
 	UIImageView					*tagMenuBackground;
@@ -37,45 +41,49 @@ extern double const kMapSpanDelta;
 	NSTimer						*ticker;
 	NSString					*dbpath;
 	NSString					*device;
+	NSUserDefaults				*settings;
 	CLLocationManager			*locationManager;
 	CLLocation					*oldLocation, *lastCenteredLocation;
+	CLRegion					*currentBoundary;
 	UIAccelerometer				*accelerometer;
 	AVAudioRecorder				*recorder;
 	MKMapView					*mapView;
 	NSMutableArray				*speedValues;
-	NSDate						*lastAlertedUser;
+	NSDate						*lastAlertedUser, *lastRecordedData;
 	NSURLConnection				*dangerTagsConnection;
 	NSMutableData				*dangerTagsData;
 	UIBackgroundTaskIdentifier	bgTask;
 	int							accelValuesCollected;
 	float						accelX, accelY, accelZ, speed, thrownAwaySpeed;
-	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges;
+	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption;
 }
 
 @property (nonatomic, retain) TagMenuViewController			*tagMenu;
 @property (nonatomic, retain) UIImageView					*tagMenuBackground;
-
 @property (nonatomic, retain) IBOutlet GradientButton		*startButton, *tagButton;
 @property (nonatomic, retain) IBOutlet UILabel				*speedometer;
 @property (nonatomic, retain) NSTimer						*ticker;
 @property (nonatomic, retain) NSString						*dbpath;
 @property (nonatomic, retain) NSString						*device;
+@property (nonatomic, retain) NSUserDefaults				*settings;
 @property (nonatomic, retain) CLLocationManager				*locationManager;
 @property (nonatomic, retain) CLLocation					*oldLocation, *lastCenteredLocation;
+@property (nonatomic, retain) CLRegion						*currentBoundary;
 @property (nonatomic, retain) UIAccelerometer				*accelerometer;
 @property (nonatomic, retain) AVAudioRecorder				*recorder;
 @property (nonatomic, retain) IBOutlet MKMapView			*mapView;
 @property (nonatomic, retain) NSMutableArray				*speedValues;
-@property (nonatomic, retain) NSDate						*lastAlertedUser;
+@property (nonatomic, retain) NSDate						*lastAlertedUser, *lastRecordedData;
 @property (nonatomic, retain) NSURLConnection				*dangerTagsConnection;
 @property (nonatomic, retain) NSMutableData					*dangerTagsData;
 @property (nonatomic, assign) UIBackgroundTaskIdentifier	bgTask;
 @property (nonatomic, assign) int							accelValuesCollected;
 @property (nonatomic, assign) float							accelX, accelY, accelZ, speed, thrownAwaySpeed;
-@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges;
+@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption;
 
 // Initializing functions
 - (BOOL)sqlcon;
+- (void)loadUserSettings;
 
 // Variable manipulation functions
 - (void)calculateSpeed;
@@ -102,6 +110,7 @@ extern double const kMapSpanDelta;
 - (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate;
 - (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
+- (void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region;
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control;
 - (MKAnnotationView *)mapView:(MKMapView *)_mapView viewForAnnotation:(id<MKAnnotation>)annotation;
 
@@ -111,6 +120,7 @@ extern double const kMapSpanDelta;
 - (void)openTagMenuWithAnnotationView:(MKAnnotationView *)view;
 - (void)openTagMenu;
 - (void)tagMenuDidClose;
+- (void)settingsMenuDidClose;
 
 // Input receiving functions
 - (void)longTouchHappened:(UIGestureRecognizer *)gestureRecognizer;
@@ -118,7 +128,16 @@ extern double const kMapSpanDelta;
 - (IBAction)startButtonWasTouched:(id)sender;
 - (IBAction)tagButtonWasTouched:(id)sender;
 - (IBAction)feedbackButtonWasTouched:(id)sender;
+- (IBAction)settingsButtonWasTouched:(id)sender;
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
+
+// Enabling/Disabling functions
+- (void)enableLocationServices;
+- (void)disableLocationServices;
+- (void)enableAccelerometer;
+- (void)disableAccelerometer;
+- (void)enableMicrophone;
+- (void)disableMicrophone;
 
 // Ticking functions
 - (void)record:(id)sender;

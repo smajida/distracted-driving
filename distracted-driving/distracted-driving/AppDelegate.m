@@ -35,7 +35,7 @@
 	
 	// Check if the app has been woken up from the background
 	if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
-		[TestFlight passCheckpoint:@"Launched from Location Services"];
+		[TestFlight passCheckpoint:@"Launched from Geofence Boundary"];
 	
     return YES;
 }
@@ -113,11 +113,31 @@
 	 // Only monitor significant changes – unless recording
 	 if(!self.viewController.recording)
 	 {
+		 // Flag that lets us know we're monitoring the region
 		 self.viewController.isUsingOnlySignificantChanges = YES;
 		 
-		 [self.viewController.locationManager stopUpdatingLocation];
-		 [self.viewController.locationManager startMonitoringSignificantLocationChanges];
+		 // Stop using full location services
+		 [self.viewController disableLocationServices];
+		 
+		 if([CLLocationManager regionMonitoringAvailable] && [CLLocationManager regionMonitoringEnabled])
+		 {
+			 // Create a boundary -- a circle around the current location
+			 self.viewController.currentBoundary = [[CLRegion alloc] initCircularRegionWithCenter:self.viewController.locationManager.location.coordinate radius:kSignificantLocationChange identifier:@"Current Location Boundary"];
+			 
+			 // Monitor the boundary
+			 [self.viewController.locationManager startMonitoringForRegion:self.viewController.currentBoundary];
+		 }
+		 else
+		 {
+			 // Use significant change, because the device doesn't support Geofencing
+			 [self.viewController.locationManager startMonitoringSignificantLocationChanges];
+			 [TestFlight passCheckpoint:@"Used significant change instead of geofencing."];
+		 }
 	 }
+	 
+	 // Disable other services
+	 [self.viewController disableAccelerometer];
+	 [self.viewController disableMicrophone];
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application
@@ -133,10 +153,25 @@
 	 Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
 	 */
 	
+	// When the app is open, always use full location services
 	self.viewController.isUsingOnlySignificantChanges = NO;
 	
+	// Stop monitoring the region
+	if(self.viewController.currentBoundary)
+	{
+		[self.viewController.locationManager stopMonitoringForRegion:self.viewController.currentBoundary];
+		self.viewController.currentBoundary = nil;
+	}
+	
+	// Stop significant changes, if we were using them
 	[self.viewController.locationManager stopMonitoringSignificantLocationChanges];
-	[self.viewController.locationManager startUpdatingLocation];
+	
+	// Start full location services again
+	[self.viewController enableLocationServices];
+	
+	// Enable other serices
+	[self.viewController enableAccelerometer];
+	[self.viewController enableMicrophone];
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application

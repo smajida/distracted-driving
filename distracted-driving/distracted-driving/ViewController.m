@@ -11,17 +11,20 @@
 @implementation ViewController
 
 // Settings (Constants)
-int const		kMinimumDrivingSpeed	= 10;
-int const		kDrasticSpeedChange		= 50;
-int const		kDataPointsForAverage	= 5;
-int const		kAlertExpire			= 300;		// 5 minutes
-double const	kMapSpanDelta			= 0.005;
+int const		kMinimumDrivingSpeed		= 10;
+float const		kTimeIntervalForTick		= 5.0;
+int const		kPauseInterval				= 10;
+int const		kDrasticSpeedChange			= 50;
+int const		kSignificantLocationChange	= 100;
+int const		kDataPointsForAverage		= 5;
+int const		kAlertExpire				= 300;		// 5 minutes
+double const	kMapSpanDelta				= 0.005;
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, dangerTagsData, dangerTagsConnection;
+@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, lastRecordedData, dangerTagsData, dangerTagsConnection, settings;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption;
 
 /**************************
  * Initializing functions *
@@ -89,6 +92,14 @@ double const	kMapSpanDelta			= 0.005;
 	NSLog(@":: Connected to SQL.");
 	
 	return YES;
+}
+
+- (void)loadUserSettings
+{
+	settings = [NSUserDefaults standardUserDefaults];
+	
+	if([settings objectForKey:@"limitBatteryConsumption"])
+		limitBatteryConsumption = [settings boolForKey:@"limitBatteryConsumption"];
 }
 
 /***********************************
@@ -510,35 +521,27 @@ double const	kMapSpanDelta			= 0.005;
 		oldLocation = newLocation;
 	}
 	
-	if(speed > kMinimumDrivingSpeed && !recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire && !tagMenu)
+	// This alert is for phones that can't use Geofencing
+	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground && speed > kMinimumDrivingSpeed && !recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire && !tagMenu)
 	{
-		NSString *alertString = @"You appear to be driving!  If you are, please start recording.";
+		[TestFlight passCheckpoint:@"Notified user in background via significant change."];
+		NSString *alertString = @"Don't forget to record when you're driving!";
 		
-		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
-		{
-			[TestFlight passCheckpoint:@"Notified user in background."];
+		// Alert the user from the background that they need to record
+		bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+			[[UIApplication sharedApplication] endBackgroundTask:bgTask];
+			bgTask = UIBackgroundTaskInvalid;
+		}];
+		
+		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			// Alert the user they need to start recording because they are driving
+			UILocalNotification *notification	= [[UILocalNotification alloc] init];
+			notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+			notification.alertBody				= alertString;
+			notification.soundName				= UILocalNotificationDefaultSoundName;
 			
-			// Alert the user from the background that they need to record
-			bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-				[[UIApplication sharedApplication] endBackgroundTask:bgTask];
-				bgTask = UIBackgroundTaskInvalid;
-			}];
-			
-			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-				// Alert the user they need to start recording because they are driving
-				UILocalNotification *notification	= [[UILocalNotification alloc] init];
-				notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
-				notification.alertBody				= alertString;
-				notification.soundName				= UILocalNotificationDefaultSoundName;
-				
-				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
-			});
-		}
-		else
-		{
-			UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Warning" message:alertString delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
-			[alert show];
-		}
+			[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+		});
 		
 		lastAlertedUser = [NSDate date];
 	}
@@ -572,13 +575,40 @@ double const	kMapSpanDelta			= 0.005;
 		dangerTagsConnection	= [[NSURLConnection alloc] initWithRequest:request delegate:self];
 		didGetDangerTags		= YES;
 	}
+}
+
+// Detect significant changes
+- (void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region
+{
+	NSString *alertString = @"Don't forget to record when you're driving!";
 	
-	// Record the data if in background
-	if(recording && [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 	{
-		NSLog(@"recording in background");
-		[self record:self];
+		[TestFlight passCheckpoint:@"Notified user in background via Geofencing."];
+		
+		// Alert the user from the background that they need to record
+		bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+			[[UIApplication sharedApplication] endBackgroundTask:bgTask];
+			bgTask = UIBackgroundTaskInvalid;
+		}];
+		
+		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			// Alert the user they need to start recording because they are driving
+			UILocalNotification *notification	= [[UILocalNotification alloc] init];
+			notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+			notification.alertBody				= alertString;
+			notification.soundName				= UILocalNotificationDefaultSoundName;
+			
+			[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+		});
 	}
+	else
+	{
+		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Warning" message:alertString delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+		[alert show];
+	}
+	
+	lastAlertedUser = [NSDate date];
 }
 
 // Handle callout button touches
@@ -700,6 +730,27 @@ double const	kMapSpanDelta			= 0.005;
 	tagMenu = nil;
 }
 
+- (void)settingsMenuDidClose
+{
+	// Check changed settings and make appropriate changes
+	if(limitBatteryConsumption)
+	{
+		// Don't use the magnetometer
+		[locationManager stopUpdatingHeading];
+		
+		// Don't use the microphone
+		[self disableMicrophone];
+	}
+	else
+	{
+		// Use the magnetometer
+		[locationManager startUpdatingHeading];
+		
+		// Use the microphone
+		[self enableMicrophone];
+	}
+}
+
 /*******************************
  * Server/Connection functions *
  *******************************/
@@ -717,6 +768,10 @@ double const	kMapSpanDelta			= 0.005;
 	if(connection == dangerTagsConnection)
 	{
 		[dangerTagsData appendData:data];
+	}
+	else
+	{
+		NSLog(@"data: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
 	}
 }
 
@@ -809,7 +864,7 @@ double const	kMapSpanDelta			= 0.005;
 		[startButton setBackgroundColor: [UIColor colorWithRed:0.6f green:0.1f blue:0.1f alpha:1.0f]];
 		
 		// Start recording
-		ticker = [NSTimer scheduledTimerWithTimeInterval:5.0 target:self selector:@selector(record:) userInfo:nil repeats:YES];
+		ticker = [NSTimer scheduledTimerWithTimeInterval:kTimeIntervalForTick target:self selector:@selector(record:) userInfo:nil repeats:YES];
 	}
 	else
 	{
@@ -824,7 +879,7 @@ double const	kMapSpanDelta			= 0.005;
 		ticker = nil;
 		
 		// Reset the alert
-		lastAlertedUser = [NSDate dateWithTimeIntervalSince1970:0];
+		lastAlertedUser = [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 		
 		// Display the popup
 		[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
@@ -859,10 +914,163 @@ double const	kMapSpanDelta			= 0.005;
 	[TestFlight openFeedbackView];
 }
 
+- (IBAction)settingsButtonWasTouched:(id)sender
+{
+	SettingsViewController *settingsViewController = [[SettingsViewController alloc] initWithNibName:@"SettingsViewController" bundle:nil];
+	settingsViewController.modalTransitionStyle = UIModalTransitionStyleFlipHorizontal;
+	settingsViewController.delegate = self;
+	[self presentModalViewController:settingsViewController animated:YES];
+}
+
 // Enable gesture recognition
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {   
     return YES;
+}
+
+/********************************
+ * Enabling/Disabling functions *
+ ********************************/
+
+- (void)enableLocationServices
+{
+	BOOL inBackground = [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground;
+	
+	// This flag will only be true when app is running in the background
+	isUsingOnlySignificantChanges = NO;
+	
+	// Create the location manager
+	if(!locationManager)
+	{
+		locationManager					= [[CLLocationManager alloc] init];
+		locationManager.delegate		= self;
+		locationManager.distanceFilter	= kCLDistanceFilterNone;
+		locationManager.desiredAccuracy	= kCLLocationAccuracyHundredMeters;
+	}
+	
+	// Stop background monitoring (may be lingering from old versions, killed app, etc.)
+	[locationManager stopMonitoringSignificantLocationChanges];
+	
+	// Stop background monitoring (regions)
+	for(int i = 0; i < [[[locationManager monitoredRegions] allObjects] count]; i++)
+		[locationManager stopMonitoringForRegion:[[[locationManager monitoredRegions] allObjects] objectAtIndex:i]];
+	
+	// If we're in the background, this is all that is required, so stop here
+	if(inBackground)
+		return;
+	
+	// Start magnetometer
+	if(!limitBatteryConsumption)
+		[locationManager startUpdatingHeading];
+	
+	// Start location services
+	[locationManager startUpdatingLocation];
+	
+	oldLocation = nil;
+	
+	// Set up the map view
+	UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouchHappened:)];
+	UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHappened:)];
+	[pan setDelegate:self];
+	
+	[mapView addGestureRecognizer:longPress];
+	[mapView addGestureRecognizer:pan];
+	[mapView setDelegate:self];
+	[mapView setShowsUserLocation:YES];
+	[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
+	
+	// Temporary variables
+	MKCoordinateRegion		region;
+	MKCoordinateSpan		span;
+	
+	// Set the span
+	span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
+	
+	// Set up the region
+	region.span		= span;
+	region.center	= locationManager.location.coordinate;
+	
+	// Set mapView region
+	[mapView setRegion:region animated:YES];
+}
+
+- (void)disableLocationServices
+{
+	// Stop all location services
+	[locationManager stopUpdatingHeading];
+	[locationManager stopUpdatingLocation];
+	[locationManager stopMonitoringSignificantLocationChanges];
+	
+	// Stop background monitoring (regions)
+	for(int i = 0; i < [[[locationManager monitoredRegions] allObjects] count]; i++)
+		[locationManager stopMonitoringForRegion:[[[locationManager monitoredRegions] allObjects] objectAtIndex:i]];
+	
+	// Stop the map view from updating
+	[mapView setUserTrackingMode:MKUserTrackingModeNone];
+	[mapView setShowsUserLocation:NO];
+}
+
+- (void)enableAccelerometer
+{
+	if(!accelerometer)
+	{
+		accelerometer = [UIAccelerometer sharedAccelerometer];
+	}
+	
+	accelerometer.delegate			= (id) self;
+	accelerometer.updateInterval	= 0.1;
+	accelX = accelY = accelZ		= 0.0;
+	accelValuesCollected			= 0;
+}
+
+- (void)disableAccelerometer
+{
+	accelerometer.delegate = nil;
+}
+
+- (void)enableMicrophone
+{
+	BOOL shouldUseMic = YES;
+	
+	if(!recorder)
+	{
+		NSURL			*url		= [NSURL fileURLWithPath:@"/dev/null"];
+		NSDictionary	*setting	= [NSDictionary dictionaryWithObjectsAndKeys:
+									   [NSNumber numberWithFloat:44100.0],					AVSampleRateKey,
+									   [NSNumber numberWithInt:kAudioFormatAppleLossless],	AVFormatIDKey,
+									   [NSNumber numberWithInt:1],							AVNumberOfChannelsKey,
+									   [NSNumber numberWithInt:AVAudioQualityMax],			AVEncoderAudioQualityKey,
+									   nil];
+		
+		NSError *error;
+		
+		// Don't use the mic if the user is already playing music or listening to something
+		[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:&error];
+		[[AVAudioSession sharedInstance] setActive:YES error:&error];
+		
+		UInt32 otherAudio;
+		UInt32 size = sizeof(otherAudio);
+		AudioSessionGetProperty(kAudioSessionProperty_OtherAudioIsPlaying, &size, &otherAudio);
+		
+		recorder		= [[AVAudioRecorder alloc] initWithURL:url settings:setting error:&error];
+		shouldUseMic	= (!otherAudio);
+	}
+	
+	if(shouldUseMic && !limitBatteryConsumption)
+	{
+		if(recorder)
+		{
+			[recorder prepareToRecord];
+			recorder.meteringEnabled = YES;
+			[recorder record];
+		}
+	}
+}
+
+- (void)disableMicrophone
+{
+	if(recorder)
+		[recorder stop];
 }
 
 /*********************
@@ -904,6 +1112,8 @@ double const	kMapSpanDelta			= 0.005;
 	// GPS
 	if(locationManager.heading.trueHeading >= 0 && [self isValidLocation:locationManager.location])
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: %f, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, locationManager.heading.trueHeading, speed];
+	else if([self isValidLocation:locationManager.location])
+		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: Unknown, Speed: %f", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, speed];
 	else
 		gps = [NSString stringWithFormat:@"Latitude: %f, Longitude: %f, Heading: Unknown, Speed: Unknown", locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude];
 	
@@ -928,6 +1138,8 @@ double const	kMapSpanDelta			= 0.005;
 		battery = @"Unknown";
 	
 	[self insertRowWithAccelorometer:accel andSound:sound andGps:gps andCompass:compass andBattery:battery];
+	
+	lastRecordedData = [NSDate date];
 }
 
 /********************
@@ -983,89 +1195,24 @@ double const	kMapSpanDelta			= 0.005;
 	device = @"Unknown";
 	
 	// Set other variables
-	recording			= NO;
-	trackingUser		= YES;
-	lastAlertedUser		= [NSDate dateWithTimeIntervalSince1970:0];
-	speed				= 0.0;
-	thrownAwaySpeed		= -1.0;
+	recording				= NO;
+	trackingUser			= YES;
+	limitBatteryConsumption	= NO;
+	lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
+	lastRecordedData		= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
+	speed					= 0.0;
+	thrownAwaySpeed			= -1.0;
+	
+	// Load user settings
+	[self loadUserSettings];
 	
 	// Set up speed monitor
 	speedValues = [[NSMutableArray alloc] init];
 	
-	// Set up GPS
-	isUsingOnlySignificantChanges	= NO;
-	
-	locationManager					= [[CLLocationManager alloc] init];
-	locationManager.delegate		= self;
-	locationManager.distanceFilter	= kCLDistanceFilterNone;
-	locationManager.desiredAccuracy	= kCLLocationAccuracyHundredMeters;
-	[locationManager startUpdatingLocation];
-	[locationManager startUpdatingHeading];
-	
-	oldLocation = nil;
-	
-	// Set up the map view
-	UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouchHappened:)];
-	UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHappened:)];
-	
-	[pan setDelegate:self];
-	
-	[mapView addGestureRecognizer:longPress];
-	[mapView addGestureRecognizer:pan];
-	[mapView setDelegate:self];
-	[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
-	
-	// Temporary variables
-	MKCoordinateRegion		region;
-	MKCoordinateSpan		span;
-	
-	// Set the span
-	span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
-	
-	// Set up the region
-	region.span		= span;
-	region.center	= locationManager.location.coordinate;
-	
-	// Set mapView region
-	[mapView setRegion:region animated:YES];
-	
-	// Set up accelorometer
-	accelerometer					= [UIAccelerometer sharedAccelerometer];
-	accelerometer.delegate			= (id) self;
-	accelerometer.updateInterval	= 0.1;
-	accelX = accelY = accelZ		= 0.0;
-	accelValuesCollected			= 0;
-	
-	// Set up microphone
-	NSURL			*url		= [NSURL fileURLWithPath:@"/dev/null"];
-	NSDictionary	*settings	= [NSDictionary dictionaryWithObjectsAndKeys:
-		[NSNumber numberWithFloat:44100.0],					AVSampleRateKey,
-		[NSNumber numberWithInt:kAudioFormatAppleLossless],	AVFormatIDKey,
-		[NSNumber numberWithInt:1],							AVNumberOfChannelsKey,
-		[NSNumber numberWithInt:AVAudioQualityMax],			AVEncoderAudioQualityKey,
-	nil];
-	
-	NSError *error;
-	
-	// Don't use the mic if the user is already playing music or listening to something
-	[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:&error];
-	[[AVAudioSession sharedInstance] setActive:YES error:&error];
-	
-	UInt32 otherAudio;
-	UInt32 size = sizeof(otherAudio);
-	AudioSessionGetProperty(kAudioSessionProperty_OtherAudioIsPlaying, &size, &otherAudio);
-	
-	recorder = [[AVAudioRecorder alloc] initWithURL:url settings:settings error:&error];
-	
-	if(!otherAudio)
-	{
-		if(recorder)
-		{
-			[recorder prepareToRecord];
-			recorder.meteringEnabled = YES;
-			[recorder record];
-		}
-	}
+	// Enable data collection
+	[self enableLocationServices];
+	[self enableAccelerometer];
+	[self enableMicrophone];
 }
 
 - (void)viewDidUnload
@@ -1081,15 +1228,18 @@ double const	kMapSpanDelta			= 0.005;
 	self.locationManager		= nil;
 	self.oldLocation			= nil;
 	self.lastCenteredLocation	= nil;
+	self.currentBoundary		= nil;
 	self.accelerometer			= nil;
 	self.recorder				= nil;
 	self.mapView				= nil;
 	self.speedValues			= nil;
 	self.lastAlertedUser		= nil;
+	self.lastRecordedData		= nil;
 	self.tagMenu				= nil;
 	self.tagMenuBackground		= nil;
 	self.dangerTagsConnection	= nil;
 	self.dangerTagsData			= nil;
+	self.settings				= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated
