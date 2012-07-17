@@ -11,7 +11,7 @@
 @protocol SettingsDelegate <NSObject>
 @required
 
-@property (nonatomic, assign) BOOL limitBatteryConsumption;
+@property (nonatomic, assign) BOOL limitBatteryConsumption, remindUserToRecord;
 
 - (void)settingsMenuDidClose;
 
@@ -22,10 +22,11 @@
 {
 	id <SettingsDelegate>	delegate;
 	UISwitch				*energySwitch;
+	UISwitch				*reminderSwitch;
 }
 
 @property (nonatomic, retain) id <SettingsDelegate>	delegate;
-@property (nonatomic, retain) IBOutlet UISwitch		*energySwitch;
+@property (nonatomic, retain) IBOutlet UISwitch		*energySwitch, *reminderSwitch;
 
 - (IBAction)saveButtonWasTouched:(id)sender;
 

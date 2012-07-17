@@ -10,20 +10,22 @@
 
 @implementation SettingsViewController
 
-@synthesize delegate, energySwitch;
+@synthesize delegate, energySwitch, reminderSwitch;
 
 - (IBAction)saveButtonWasTouched:(id)sender
 {
 	// Save settings
 	[[NSUserDefaults standardUserDefaults] setBool:energySwitch.on forKey:@"limitBatteryConsumption"];
+	[[NSUserDefaults standardUserDefaults] setBool:!reminderSwitch.on forKey:@"doNotRemindUserToRecord"];
 	[[NSUserDefaults standardUserDefaults] synchronize];
 	
 	if(delegate)
+	{
 		[delegate setLimitBatteryConsumption:energySwitch.on];
-	
-	// Close settings panel
-	if(delegate)
+		[delegate setRemindUserToRecord:reminderSwitch.on];
+		
 		[delegate settingsMenuDidClose];
+	}
 	
 	[self dismissModalViewControllerAnimated:YES];
 }
@@ -43,7 +45,10 @@
     [super viewDidLoad];
 	
 	if(delegate)
+	{
 		[energySwitch setOn:[delegate limitBatteryConsumption]];
+		[reminderSwitch setOn:[delegate remindUserToRecord]];
+	}
 }
 
 - (void)viewDidUnload
@@ -51,6 +56,7 @@
 	[super viewDidUnload];
 	
 	energySwitch	= nil;
+	reminderSwitch	= nil;
 }
 
 - (void)didReceiveMemoryWarning

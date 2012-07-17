@@ -11,20 +11,21 @@
 @implementation ViewController
 
 // Settings (Constants)
-int const		kMinimumDrivingSpeed		= 10;
-float const		kTimeIntervalForTick		= 5.0;
-int const		kPauseInterval				= 10;
-int const		kDrasticSpeedChange			= 50;
-int const		kSignificantLocationChange	= 100;
-int const		kDataPointsForAverage		= 5;
+int const		kMinimumDrivingSpeed		= 10;		// 10 mph
+float const		kTimeIntervalForTick		= 5.0;		// 5.0 seconds
+int const		kPauseInterval				= 10;		// 10 seconds
+int const		kMaximumStopTime			= 300;		// 5 minutes
+int const		kDrasticSpeedChange			= 50;		// 50 mps
+int const		kSignificantLocationChange	= 100;		// 100 meters
+int const		kDataPointsForAverage		= 5;		// 5 points
 int const		kAlertExpire				= 300;		// 5 minutes
-double const	kMapSpanDelta				= 0.005;
+double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, lastRecordedData, dangerTagsData, dangerTagsConnection, settings;
+@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, lastRecordedData, dateStopped, dangerTagsData, dangerTagsConnection, settings;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground;
 
 /**************************
  * Initializing functions *
@@ -96,10 +97,11 @@ double const	kMapSpanDelta				= 0.005;
 
 - (void)loadUserSettings
 {
+	// Load saved settings
 	settings = [NSUserDefaults standardUserDefaults];
 	
-	if([settings objectForKey:@"limitBatteryConsumption"])
-		limitBatteryConsumption = [settings boolForKey:@"limitBatteryConsumption"];
+	limitBatteryConsumption	= [settings boolForKey:@"limitBatteryConsumption"];
+	remindUserToRecord		= ![settings boolForKey:@"doNotRemindUserToRecord"];
 }
 
 /***********************************
@@ -111,8 +113,6 @@ double const	kMapSpanDelta				= 0.005;
 {
 	// Temporary variables
 	float averageSpeed = 0.0, highestSpeed = 0.0, lowestSpeed = 0.0;
-	
-	NSString *foo;
 	
 	// Get average, lowest, and highest speeds for the data points
 	for(int i = 0; i < [speedValues count]; i++)
@@ -137,38 +137,58 @@ double const	kMapSpanDelta				= 0.005;
 		// If there are enough points, we can use the average
 		if([speedValues count] == kDataPointsForAverage)
 		{
-			if(([self mphFromMps:highestSpeed] - [self mphFromMps:lowestSpeed]) > 5)
+			if(([self mphFromMps:highestSpeed] - [self mphFromMps:lowestSpeed]) < 5)
 			{
-				// Peak/valley difference is high; bad average, use only two points
-				foo = @"Limited average.";
-				
-				if([[speedValues objectAtIndex:0] intValue] == 0 || [[speedValues objectAtIndex:1] intValue] == 0)
-					speed = 0.0; // If either of the last two points are zero, assume zero
-				else
-					speed = (([[speedValues objectAtIndex:0] floatValue] + [[speedValues objectAtIndex:1] floatValue]) / 2);
-			}
-			else
-			{
-				// Peak/valley difference is low; good average, use all points
-				foo = @"Full average.";
+				// Peak/valley difference is low; good average
 				speed = averageSpeed;
 			}
 		}
 		else
-		{
-			foo = @"Gathering data.";
 			speed = 0.0;
-		}
 	}
 	else
-	{
-		foo = @"No data yet.";
 		speed = 0.0;
+	
+	// Update stop time
+	if(speed >= kMinimumDrivingSpeed)
+		dateStopped = [NSDate date];
+	
+	if(recording && [[NSDate date] timeIntervalSinceDate:dateStopped] > kMaximumStopTime && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire)
+	{
+		// Alert the user; they've been stopped for a long time
+		NSString *alertString = @"Don't forget to stop recording when you're finished!";
+		
+		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+		{
+			[TestFlight passCheckpoint:@"Notified user in background to stop recording."];
+			
+			// Alert the user from the background that they need to record
+			bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+				[[UIApplication sharedApplication] endBackgroundTask:bgTask];
+				bgTask = UIBackgroundTaskInvalid;
+			}];
+			
+			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+				// Alert the user they need to start recording because they are driving
+				UILocalNotification *notification	= [[UILocalNotification alloc] init];
+				notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+				notification.alertBody				= alertString;
+				notification.soundName				= UILocalNotificationDefaultSoundName;
+				
+				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+			});
+		}
+		else
+		{
+			UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Attention!" message:alertString delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+			[alert show];
+		}
+		
+		lastAlertedUser = [NSDate date];
 	}
 	
 	// Convert speed to MPH
 	speed = [self mphFromMps:speed];
-	[speedometer setText:[NSString stringWithFormat:@"%d mph\n%@", (int) speed, foo]];
 }
 
 // Convert meters per second into miles per hour
@@ -739,7 +759,8 @@ double const	kMapSpanDelta				= 0.005;
 		[locationManager stopUpdatingHeading];
 		
 		// Don't use the microphone
-		[self disableMicrophone];
+		if([recorder isRecording])
+			[self disableMicrophone];
 	}
 	else
 	{
@@ -747,7 +768,8 @@ double const	kMapSpanDelta				= 0.005;
 		[locationManager startUpdatingHeading];
 		
 		// Use the microphone
-		[self enableMicrophone];
+		if(![recorder isRecording])
+			[self enableMicrophone];
 	}
 }
 
@@ -946,6 +968,28 @@ double const	kMapSpanDelta				= 0.005;
 		locationManager.delegate		= self;
 		locationManager.distanceFilter	= kCLDistanceFilterNone;
 		locationManager.desiredAccuracy	= kCLLocationAccuracyHundredMeters;
+		
+		// Include some mapView settings here for first-time initializations
+		UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouchHappened:)];
+		UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHappened:)];
+		[pan setDelegate:self];
+		[mapView addGestureRecognizer:longPress];
+		[mapView addGestureRecognizer:pan];
+		[mapView setDelegate:self];
+		
+		// Temporary variables
+		MKCoordinateRegion		region;
+		MKCoordinateSpan		span;
+		
+		// Set the span
+		span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
+		
+		// Set up the region
+		region.span		= span;
+		region.center	= locationManager.location.coordinate;
+		
+		// Set mapView region
+		[mapView setRegion:region animated:YES];
 	}
 	
 	// Stop background monitoring (may be lingering from old versions, killed app, etc.)
@@ -968,30 +1012,8 @@ double const	kMapSpanDelta				= 0.005;
 	
 	oldLocation = nil;
 	
-	// Set up the map view
-	UILongPressGestureRecognizer	*longPress	= [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longTouchHappened:)];
-	UIPanGestureRecognizer			*pan		= [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panHappened:)];
-	[pan setDelegate:self];
-	
-	[mapView addGestureRecognizer:longPress];
-	[mapView addGestureRecognizer:pan];
-	[mapView setDelegate:self];
 	[mapView setShowsUserLocation:YES];
 	[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
-	
-	// Temporary variables
-	MKCoordinateRegion		region;
-	MKCoordinateSpan		span;
-	
-	// Set the span
-	span.longitudeDelta = span.latitudeDelta = kMapSpanDelta;
-	
-	// Set up the region
-	region.span		= span;
-	region.center	= locationManager.location.coordinate;
-	
-	// Set mapView region
-	[mapView setRegion:region animated:YES];
 }
 
 - (void)disableLocationServices
@@ -1013,9 +1035,7 @@ double const	kMapSpanDelta				= 0.005;
 - (void)enableAccelerometer
 {
 	if(!accelerometer)
-	{
 		accelerometer = [UIAccelerometer sharedAccelerometer];
-	}
 	
 	accelerometer.delegate			= (id) self;
 	accelerometer.updateInterval	= 0.1;
@@ -1030,8 +1050,6 @@ double const	kMapSpanDelta				= 0.005;
 
 - (void)enableMicrophone
 {
-	BOOL shouldUseMic = YES;
-	
 	if(!recorder)
 	{
 		NSURL			*url		= [NSURL fileURLWithPath:@"/dev/null"];
@@ -1042,25 +1060,28 @@ double const	kMapSpanDelta				= 0.005;
 									   [NSNumber numberWithInt:AVAudioQualityMax],			AVEncoderAudioQualityKey,
 									   nil];
 		
-		NSError *error;
+		UInt32 override	= YES;
+		UInt32 speaker	= kAudioSessionOverrideAudioRoute_Speaker;
 		
-		// Don't use the mic if the user is already playing music or listening to something
-		[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:&error];
-		[[AVAudioSession sharedInstance] setActive:YES error:&error];
+		[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
+		
+		AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryMixWithOthers, sizeof(override), &override);
+		AudioSessionSetProperty(kAudioSessionProperty_OverrideAudioRoute, sizeof(speaker), &speaker);
+		
+		[[AVAudioSession sharedInstance] setActive:YES error:nil];
 		
 		UInt32 otherAudio;
 		UInt32 size = sizeof(otherAudio);
+		
 		AudioSessionGetProperty(kAudioSessionProperty_OtherAudioIsPlaying, &size, &otherAudio);
 		
-		recorder		= [[AVAudioRecorder alloc] initWithURL:url settings:setting error:&error];
-		shouldUseMic	= (!otherAudio);
+		recorder = [[AVAudioRecorder alloc] initWithURL:url settings:setting error:nil];
 	}
 	
-	if(shouldUseMic && !limitBatteryConsumption)
+	if(!limitBatteryConsumption)
 	{
 		if(recorder)
 		{
-			[recorder prepareToRecord];
 			recorder.meteringEnabled = YES;
 			[recorder record];
 		}
@@ -1197,9 +1218,10 @@ double const	kMapSpanDelta				= 0.005;
 	// Set other variables
 	recording				= NO;
 	trackingUser			= YES;
-	limitBatteryConsumption	= NO;
+	hasBeenInBackground		= NO;
 	lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 	lastRecordedData		= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
+	dateStopped				= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 	speed					= 0.0;
 	thrownAwaySpeed			= -1.0;
 	
@@ -1235,6 +1257,7 @@ double const	kMapSpanDelta				= 0.005;
 	self.speedValues			= nil;
 	self.lastAlertedUser		= nil;
 	self.lastRecordedData		= nil;
+	self.dateStopped			= nil;
 	self.tagMenu				= nil;
 	self.tagMenuBackground		= nil;
 	self.dangerTagsConnection	= nil;
