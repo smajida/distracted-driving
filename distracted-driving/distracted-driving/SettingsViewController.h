@@ -7,11 +7,12 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <CoreLocation/CoreLocation.h>
 
 @protocol SettingsDelegate <NSObject>
 @required
 
-@property (nonatomic, assign) BOOL limitBatteryConsumption, remindUserToRecord;
+@property (nonatomic, assign) BOOL limitBatteryConsumption, remindUserToRecord, automaticallyStartAndStop;
 
 - (void)settingsMenuDidClose;
 
@@ -21,12 +22,11 @@
 @interface SettingsViewController : UIViewController
 {
 	id <SettingsDelegate>	delegate;
-	UISwitch				*energySwitch;
-	UISwitch				*reminderSwitch;
+	UISwitch				*energySwitch, *reminderSwitch, *automaticSwitch;
 }
 
 @property (nonatomic, retain) id <SettingsDelegate>	delegate;
-@property (nonatomic, retain) IBOutlet UISwitch		*energySwitch, *reminderSwitch;
+@property (nonatomic, retain) IBOutlet UISwitch		*energySwitch, *reminderSwitch, *automaticSwitch;
 
 - (IBAction)saveButtonWasTouched:(id)sender;
 

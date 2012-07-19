@@ -37,8 +37,6 @@
 
 - (IBAction)closeAndUpload:(id)sender
 {
-	[TestFlight passCheckpoint:@"Uploaded recorded data to the server."];
-	
 	if(delegate)
 	{
 		[delegate uploadRows];

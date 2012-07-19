@@ -25,14 +25,16 @@ extern int const	kMinimumDrivingSpeed;
 extern float const	kTimeIntervalForTick;
 extern int const	kPauseInterval;
 extern int const	kMaximumStopTime;
+extern int const	kAutomaticallyStopTime;
 extern int const	kDrasticSpeedChange;
 extern int const	kSignificantLocationChange;
 extern int const	kMaximumSpeedAge;
 extern int const	kDataPointsForAverage;
 extern int const	kAlertExpire;
+extern int const	kAlertViewDangerTag;
 extern double const kMapSpanDelta;
 
-@interface ViewController : UIViewController <CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate, TagMenuDelegate, SettingsDelegate>
+@interface ViewController : UIViewController <UIAlertViewDelegate, CLLocationManagerDelegate, MKMapViewDelegate, UIGestureRecognizerDelegate, TagMenuDelegate, SettingsDelegate>
 {
 	TagMenuViewController		*tagMenu;
 	UIImageView					*tagMenuBackground;
@@ -49,6 +51,7 @@ extern double const kMapSpanDelta;
 	UIAccelerometer				*accelerometer;
 	AVAudioRecorder				*recorder;
 	MKMapView					*mapView;
+	MKAnnotationView			*selectedAnnotation;
 	NSMutableArray				*speedValues;
 	NSDate						*lastAlertedUser, *lastRecordedData, *dateStopped;
 	NSURLConnection				*dangerTagsConnection;
@@ -56,7 +59,7 @@ extern double const kMapSpanDelta;
 	UIBackgroundTaskIdentifier	bgTask;
 	int							accelValuesCollected;
 	float						accelX, accelY, accelZ, speed, thrownAwaySpeed;
-	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground;
+	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
 }
 
 @property (nonatomic, retain) TagMenuViewController			*tagMenu;
@@ -73,6 +76,7 @@ extern double const kMapSpanDelta;
 @property (nonatomic, retain) UIAccelerometer				*accelerometer;
 @property (nonatomic, retain) AVAudioRecorder				*recorder;
 @property (nonatomic, retain) IBOutlet MKMapView			*mapView;
+@property (nonatomic, retain) MKAnnotationView				*selectedAnnotation;
 @property (nonatomic, retain) NSMutableArray				*speedValues;
 @property (nonatomic, retain) NSDate						*lastAlertedUser, *lastRecordedData, *dateStopped;
 @property (nonatomic, retain) NSURLConnection				*dangerTagsConnection;
@@ -80,7 +84,7 @@ extern double const kMapSpanDelta;
 @property (nonatomic, assign) UIBackgroundTaskIdentifier	bgTask;
 @property (nonatomic, assign) int							accelValuesCollected;
 @property (nonatomic, assign) float							accelX, accelY, accelZ, speed, thrownAwaySpeed;
-@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground;
+@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
 
 // Initializing functions
 - (BOOL)sqlcon;
@@ -109,7 +113,9 @@ extern double const kMapSpanDelta;
 // Location functions
 - (BOOL)isValidLocation:(CLLocation *)newLocation;
 - (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate;
+- (void)dropTagAtCoordinate:(CLLocationCoordinate2D)coordinate withRoadConditions:(BOOL)roadConditions andTraffic:(BOOL)traffic andSignal:(BOOL)signal;
 - (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal;
+- (void)createAndMonitorRegion;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
 - (void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region;
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control;
@@ -122,6 +128,7 @@ extern double const kMapSpanDelta;
 - (void)openTagMenu;
 - (void)tagMenuDidClose;
 - (void)settingsMenuDidClose;
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex;
 
 // Input receiving functions
 - (void)longTouchHappened:(UIGestureRecognizer *)gestureRecognizer;
@@ -133,6 +140,7 @@ extern double const kMapSpanDelta;
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
 // Enabling/Disabling functions
+- (void)enableLocationServicesInBackground:(BOOL)inBackground;
 - (void)enableLocationServices;
 - (void)disableLocationServices;
 - (void)enableAccelerometer;

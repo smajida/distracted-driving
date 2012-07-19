@@ -15,17 +15,19 @@ int const		kMinimumDrivingSpeed		= 10;		// 10 mph
 float const		kTimeIntervalForTick		= 5.0;		// 5.0 seconds
 int const		kPauseInterval				= 10;		// 10 seconds
 int const		kMaximumStopTime			= 300;		// 5 minutes
+int const		kAutomaticallyStopTime		= 300;		// 5 minutes
 int const		kDrasticSpeedChange			= 50;		// 50 mps
 int const		kSignificantLocationChange	= 100;		// 100 meters
 int const		kDataPointsForAverage		= 5;		// 5 points
 int const		kAlertExpire				= 300;		// 5 minutes
+int const		kAlertViewDangerTag			= 5;		// Arbitrary tag id for danger tags
 double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, speedValues, lastAlertedUser, lastRecordedData, dateStopped, dangerTagsData, dangerTagsConnection, settings;
+@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, selectedAnnotation, speedValues, lastAlertedUser, lastRecordedData, dateStopped, dangerTagsData, dangerTagsConnection, settings;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
 
 /**************************
  * Initializing functions *
@@ -100,8 +102,9 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	// Load saved settings
 	settings = [NSUserDefaults standardUserDefaults];
 	
-	limitBatteryConsumption	= [settings boolForKey:@"limitBatteryConsumption"];
-	remindUserToRecord		= ![settings boolForKey:@"doNotRemindUserToRecord"];
+	limitBatteryConsumption		= [settings boolForKey:@"limitBatteryConsumption"];
+	remindUserToRecord			= ![settings boolForKey:@"doNotRemindUserToRecord"];
+	automaticallyStartAndStop	= [settings boolForKey:@"automaticallyStartAndStop"];
 }
 
 /***********************************
@@ -153,22 +156,43 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	if(speed >= kMinimumDrivingSpeed)
 		dateStopped = [NSDate date];
 	
-	if(recording && [[NSDate date] timeIntervalSinceDate:dateStopped] > kMaximumStopTime && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire)
+	if(automaticallyStartAndStop && [[NSDate date] timeIntervalSinceDate:dateStopped] > kAutomaticallyStopTime)
 	{
-		// Alert the user; they've been stopped for a long time
-		NSString *alertString = @"Don't forget to stop recording when you're finished!";
-		
-		if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+		// Automatically stop the recording
+		if(recording)
 		{
-			[TestFlight passCheckpoint:@"Notified user in background to stop recording."];
+			[TestFlight passCheckpoint:@"Automatically stopped recording data."];
+			[self startButtonWasTouched:self];
 			
-			// Alert the user from the background that they need to record
-			bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-				[[UIApplication sharedApplication] endBackgroundTask:bgTask];
-				bgTask = UIBackgroundTaskInvalid;
-			}];
+			if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+			{
+				// Alert the user they need to start recording because they are driving
+				UILocalNotification *notification	= [[UILocalNotification alloc] init];
+				notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+				notification.alertBody				= @"Recording has automatically stopped.";
+				notification.soundName				= UILocalNotificationDefaultSoundName;
+				
+				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+				
+				// Stop general location services
+				[self disableLocationServices];
+				
+				// Start monitoring the Geofence
+				[self createAndMonitorRegion];
+			}
+		}
+	}
+	else if(!automaticallyStartAndStop && [[NSDate date] timeIntervalSinceDate:dateStopped] > kMaximumStopTime)
+	{
+		if(recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire)
+		{
+			// Alert the user; they've been stopped for a long time
+			NSString *alertString = @"Don't forget to stop recording when you're finished!";
 			
-			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+			if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+			{
+				[TestFlight passCheckpoint:@"Notified user in background to stop recording."];
+				
 				// Alert the user they need to start recording because they are driving
 				UILocalNotification *notification	= [[UILocalNotification alloc] init];
 				notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
@@ -176,15 +200,21 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 				notification.soundName				= UILocalNotificationDefaultSoundName;
 				
 				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
-			});
+			}
+			else
+			{
+				UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Attention" message:alertString delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+				[alert show];
+			}
+			
+			lastAlertedUser			= [NSDate date];
+			dateStopped				= [NSDate date];
 		}
 		else
 		{
-			UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Attention!" message:alertString delegate:self cancelButtonTitle:@"Ok" otherButtonTitles: nil];
-			[alert show];
+			// We've been sitting around too long; adjust the region
+			[self createAndMonitorRegion];
 		}
-		
-		lastAlertedUser = [NSDate date];
 	}
 	
 	// Convert speed to MPH
@@ -297,6 +327,10 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 // Upload rows from the local database to the remote server
 - (void)uploadRows
 {
+	[TestFlight passCheckpoint:@"Uploaded recorded data to the server."];
+	
+	BOOL success = NO;
+	
 	if([self numRows] > 0)
 	{
 		NSLog(@":: Uploading data to remote server.");
@@ -345,12 +379,11 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 				connection		= [[NSURLConnection alloc] initWithRequest:request delegate:self];
 				
 				if(connection)
-				{
-					// NSLog(@":: SQL row upload successful.");
-				}
+					success = YES;
 				else
 				{
 					NSLog(@":: SQL row upload failed.");
+					success = NO;
 				}
 			}
 			
@@ -361,7 +394,8 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 			NSLog(@":: Query failed; %s!", sqlite3_errmsg(db));
 		
 		// Empty the table now that the rows have been uploaded
-		[self emptyTable];
+		if(success)
+			[self emptyTable];
 	}
 }
 
@@ -429,6 +463,36 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	[mapView addAnnotation:[[MapTag alloc] initWithName:@"Mark as Dangerous" address:nil coordinate:coordinate]];
 }
 
+// Drop a dangertag at the given locatoin
+- (void)dropTagAtCoordinate:(CLLocationCoordinate2D)coordinate withRoadConditions:(BOOL)roadConditions andTraffic:(BOOL)traffic andSignal:(BOOL)signal
+{
+	NSString *title, *subtitle;
+	BOOL isSafe = NO;
+	
+	title = @"Dangerous Zone";
+	
+	if(roadConditions && traffic)
+		subtitle = @"Dangerous traffic and road conditions";
+	else if(roadConditions)
+		subtitle = @"Dangerous road conditions";
+	else if(traffic)
+		subtitle = @"Dangerous traffic conditions";
+	else if(signal)
+	{
+		title		= @"Traffic Signal";
+		subtitle	= nil;
+	}
+	else
+		isSafe = YES;
+	
+	if(!isSafe)
+	{
+		DangerTag *tag = [[DangerTag alloc] initWithName:title address:subtitle coordinate:coordinate];
+		tag.animateDrop = YES;
+		[mapView addAnnotation:tag];
+	}
+}
+
 // Finish a location tag
 - (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal
 {
@@ -455,31 +519,11 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		// Specifically tagged location
 		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&signal=%d&trip=0", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions, signal];
 		
-		NSString *title, *subtitle;
-		BOOL isSafe = NO;
-		
-		title = @"Dangerous Zone";
-		
-		if(roadConditions && traffic)
-			subtitle = @"Dangerous traffic and road conditions";
-		else if(roadConditions)
-			subtitle = @"Dangerous road conditions";
-		else if(traffic)
-			subtitle = @"Dangerous traffic conditions";
-		else if(signal)
-		{
-			title		= @"Traffic Signal";
-			subtitle	= nil;
-		}
-		else
-			isSafe = YES;
-		
 		// Make a new annotation (DangerTag)
-		if(!isSafe)
-		{
+		[self dropTagAtCoordinate:view.annotation.coordinate withRoadConditions:roadConditions andTraffic:traffic andSignal:signal];
+		
+		if(roadConditions || traffic || signal)
 			[TestFlight passCheckpoint:@"Tagged an area as dangerous."];
-			[mapView addAnnotation:[[DangerTag alloc] initWithName:title address:subtitle coordinate:view.annotation.coordinate]];
-		}
 		
 		// Remove the annotation
 		[mapView removeAnnotation:view.annotation];
@@ -500,6 +544,23 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		NSLog(@":: Danger tag successful!");
 	else
 		NSLog(@":: Danger tag failed.");
+}
+
+// Create a circle around the current location and monitor it as a Geofence.  If an old boundary exists, remove it.
+- (void)createAndMonitorRegion
+{
+	// Remove old boundary
+	if(currentBoundary)
+	{
+		[locationManager stopMonitoringForRegion:currentBoundary];
+		currentBoundary = nil;
+	}
+	
+	// Create a boundary -- a circle around the current location
+	currentBoundary = [[CLRegion alloc] initCircularRegionWithCenter:locationManager.location.coordinate radius:kSignificantLocationChange identifier:@"Current Location Boundary"];
+	
+	// Monitor the boundary
+	[locationManager startMonitoringForRegion:currentBoundary];
 }
 
 // Start following the user if they move far enough
@@ -547,21 +608,13 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		[TestFlight passCheckpoint:@"Notified user in background via significant change."];
 		NSString *alertString = @"Don't forget to record when you're driving!";
 		
-		// Alert the user from the background that they need to record
-		bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-			[[UIApplication sharedApplication] endBackgroundTask:bgTask];
-			bgTask = UIBackgroundTaskInvalid;
-		}];
+		// Alert the user they need to start recording because they are driving
+		UILocalNotification *notification	= [[UILocalNotification alloc] init];
+		notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+		notification.alertBody				= alertString;
+		notification.soundName				= UILocalNotificationDefaultSoundName;
 		
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-			// Alert the user they need to start recording because they are driving
-			UILocalNotification *notification	= [[UILocalNotification alloc] init];
-			notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
-			notification.alertBody				= alertString;
-			notification.soundName				= UILocalNotificationDefaultSoundName;
-			
-			[[UIApplication sharedApplication] scheduleLocalNotification:notification];
-		});
+		[[UIApplication sharedApplication] scheduleLocalNotification:notification];
 		
 		lastAlertedUser = [NSDate date];
 	}
@@ -602,25 +655,40 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 {
 	NSString *alertString = @"Don't forget to record when you're driving!";
 	
-	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+	if(automaticallyStartAndStop)
+	{
+		// Start recording automatically
+		if(!recording)
+		{
+			[TestFlight passCheckpoint:@"Automatically started recording data."];
+			
+			if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
+			{
+				// Alert the user they need to start recording because they are driving
+				UILocalNotification *notification	= [[UILocalNotification alloc] init];
+				notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+				notification.alertBody				= @"Recording has automatically started.";
+				notification.soundName				= UILocalNotificationDefaultSoundName;
+				
+				[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+				
+				[self enableLocationServicesInBackground:NO];
+			}
+			
+			[self startButtonWasTouched:self];
+		}
+	}
+	else if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 	{
 		[TestFlight passCheckpoint:@"Notified user in background via Geofencing."];
 		
-		// Alert the user from the background that they need to record
-		bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-			[[UIApplication sharedApplication] endBackgroundTask:bgTask];
-			bgTask = UIBackgroundTaskInvalid;
-		}];
+		// Alert the user they need to start recording because they are driving
+		UILocalNotification *notification	= [[UILocalNotification alloc] init];
+		notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+		notification.alertBody				= alertString;
+		notification.soundName				= UILocalNotificationDefaultSoundName;
 		
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-			// Alert the user they need to start recording because they are driving
-			UILocalNotification *notification	= [[UILocalNotification alloc] init];
-			notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
-			notification.alertBody				= alertString;
-			notification.soundName				= UILocalNotificationDefaultSoundName;
-			
-			[[UIApplication sharedApplication] scheduleLocalNotification:notification];
-		});
+		[[UIApplication sharedApplication] scheduleLocalNotification:notification];
 	}
 	else
 	{
@@ -628,13 +696,27 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		[alert show];
 	}
 	
+	// Update the alert date
 	lastAlertedUser = [NSDate date];
+	
+	// Update the region
+	[self createAndMonitorRegion];
 }
 
 // Handle callout button touches
 - (void)mapView:(MKMapView *)_mapView annotationView:(MKAnnotationView *)view calloutAccessoryControlTapped:(UIControl *)control
 {
-	[self openTagMenuWithAnnotationView:view];
+	if([view.annotation isKindOfClass:[DangerTag class]])
+	{
+		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Remove Tag" message:@"Should we remove this tag?" delegate:self cancelButtonTitle:@"No" otherButtonTitles:@"Yes", nil];
+		alert.tag = kAlertViewDangerTag;
+		
+		selectedAnnotation = view;
+		
+		[alert show];
+	}
+	else
+		[self openTagMenuWithAnnotationView:view];
 }
 
 // Handle annotations
@@ -671,19 +753,13 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	annotationView.animatesDrop = tmp.animateDrop;
 	
 	if(isDangerTag)
-	{
-		// Danger tags are red and appear instantly
-		annotationView.pinColor		= MKPinAnnotationColorRed;
-	}
+		annotationView.pinColor = MKPinAnnotationColorRed;
 	else
-	{
-		// Map tags are green and animate dropping in
-		annotationView.pinColor		= MKPinAnnotationColorGreen;
-		
-		// Add a button to allow users to tag this pin as a dangerous zone
-		UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
-		[annotationView setRightCalloutAccessoryView:btn];
-	}
+		annotationView.pinColor = MKPinAnnotationColorGreen;
+	
+	// Add a button to allow users to tag this pin as a dangerous zone
+	UIButton *btn = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
+	[annotationView setRightCalloutAccessoryView:btn];
 	
 	return annotationView;
 }
@@ -773,6 +849,35 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	}
 }
 
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
+{
+	if(alertView.tag == kAlertViewDangerTag && selectedAnnotation)
+	{
+		if(buttonIndex != [alertView cancelButtonIndex])
+		{
+			[TestFlight passCheckpoint:@"Deleted a danger tag."];
+			
+			// Tell the server to delete it
+			NSString *postString = [NSString stringWithFormat:@"latitude=%f&longitude=%f", selectedAnnotation.annotation.coordinate.latitude, selectedAnnotation.annotation.coordinate.longitude];
+			
+			NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/delete_tag.php"]];
+			[request setHTTPMethod:@"POST"];
+			[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+			[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+			
+			if(connection)
+				NSLog(@":: Deleted a danger tag!");
+			
+			// Delete this danger tag
+			[selectedAnnotation removeFromSuperview];
+		}
+		
+		selectedAnnotation = nil;
+	}
+}
+
 /*******************************
  * Server/Connection functions *
  *******************************/
@@ -809,35 +914,12 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		{
 			NSDictionary *item = [dangerTags objectAtIndex:i];
 			CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake([[item objectForKey:@"latitude"] floatValue], [[item objectForKey:@"longitude"] floatValue]);
-			NSString *title, *subtitle;
 			
 			BOOL roadConditions	= [[item objectForKey:@"roadConditions"] intValue];
 			BOOL traffic		= [[item objectForKey:@"traffic"] intValue];
 			BOOL signal			= [[item objectForKey:@"signal"] intValue];
-			BOOL isSafe			= NO;
 			
-			title = @"Dangerous Zone";
-			
-			if(roadConditions && traffic)
-				subtitle = @"Dangerous traffic and road conditions";
-			else if(roadConditions)
-				subtitle = @"Dangerous road conditions";
-			else if(traffic)
-				subtitle = @"Dangerous traffic conditions";
-			else if(signal)
-			{
-				title		= @"Traffic Signal";
-				subtitle	= nil;
-			}
-			else
-				isSafe = YES;
-			
-			if(!isSafe)
-			{
-				DangerTag *tag = [[DangerTag alloc] initWithName:title address:subtitle coordinate:coordinate];
-				tag.animateDrop = YES;
-				[mapView addAnnotation:tag];
-			}
+			[self dropTagAtCoordinate:coordinate withRoadConditions:roadConditions andTraffic:traffic andSignal:signal];
 		}
 		
 		
@@ -873,23 +955,29 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 // Action received when the start/stop button is touched
 - (IBAction)startButtonWasTouched:(id)sender
 {
-	[TestFlight passCheckpoint:@"Started recording data."];
-	
 	startButton.selected = !startButton.selected;
 	
 	if(startButton.selected)
 	{
+		[TestFlight passCheckpoint:@"Started recording data."];
+		
 		// Recording
 		recording = YES;
 		
 		// Update button color to red
 		[startButton setBackgroundColor: [UIColor colorWithRed:0.6f green:0.1f blue:0.1f alpha:1.0f]];
 		
+		// Reset the date last alerted
+		lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
+		dateStopped				= [NSDate date];
+		
 		// Start recording
 		ticker = [NSTimer scheduledTimerWithTimeInterval:kTimeIntervalForTick target:self selector:@selector(record:) userInfo:nil repeats:YES];
 	}
 	else
 	{
+		[TestFlight passCheckpoint:@"Stopped recording data."];
+		
 		// Done recording
 		recording = NO;
 		
@@ -901,10 +989,17 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		ticker = nil;
 		
 		// Reset the alert
-		lastAlertedUser = [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
+		lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
+		dateStopped				= [NSDate date];
 		
 		// Display the popup
-		[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
+		if(sender == self)
+		{
+			[TestFlight passCheckpoint:@"Uploaded data automatically."];
+			[self uploadRows];
+		}
+		else
+			[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
 	}
 }
 
@@ -954,12 +1049,10 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
  * Enabling/Disabling functions *
  ********************************/
 
-- (void)enableLocationServices
+- (void)enableLocationServicesInBackground:(BOOL)inBackground
 {
-	BOOL inBackground = [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground;
-	
 	// This flag will only be true when app is running in the background
-	isUsingOnlySignificantChanges = NO;
+	isUsingOnlySignificantChanges = inBackground;
 	
 	// Create the location manager
 	if(!locationManager)
@@ -1015,6 +1108,11 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	[mapView setShowsUserLocation:YES];
 	[mapView setUserTrackingMode:MKUserTrackingModeFollow animated:YES];
 }
+- (void)enableLocationServices
+{
+	BOOL inBackground = [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground;
+	[self enableLocationServicesInBackground:inBackground];
+}
 
 - (void)disableLocationServices
 {
@@ -1034,6 +1132,12 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 
 - (void)enableAccelerometer
 {
+	BOOL inBackground = [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground;
+	
+	// No accelerometer support in the background
+	if(inBackground)
+		return;
+	
 	if(!accelerometer)
 		accelerometer = [UIAccelerometer sharedAccelerometer];
 	
@@ -1050,6 +1154,12 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 
 - (void)enableMicrophone
 {
+	BOOL inBackground = [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground;
+	
+	// No mic support in the background
+	if(inBackground)
+		return;
+	
 	if(!recorder)
 	{
 		NSURL			*url		= [NSURL fileURLWithPath:@"/dev/null"];
@@ -1069,11 +1179,6 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		AudioSessionSetProperty(kAudioSessionProperty_OverrideAudioRoute, sizeof(speaker), &speaker);
 		
 		[[AVAudioSession sharedInstance] setActive:YES error:nil];
-		
-		UInt32 otherAudio;
-		UInt32 size = sizeof(otherAudio);
-		
-		AudioSessionGetProperty(kAudioSessionProperty_OtherAudioIsPlaying, &size, &otherAudio);
 		
 		recorder = [[AVAudioRecorder alloc] initWithURL:url settings:setting error:nil];
 	}
@@ -1218,12 +1323,13 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	// Set other variables
 	recording				= NO;
 	trackingUser			= YES;
-	hasBeenInBackground		= NO;
+	hasBeenInBackground		= [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground;
 	lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 	lastRecordedData		= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 	dateStopped				= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 	speed					= 0.0;
 	thrownAwaySpeed			= -1.0;
+	selectedAnnotation		= nil;
 	
 	// Load user settings
 	[self loadUserSettings];
@@ -1263,6 +1369,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	self.dangerTagsConnection	= nil;
 	self.dangerTagsData			= nil;
 	self.settings				= nil;
+	self.selectedAnnotation		= nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated

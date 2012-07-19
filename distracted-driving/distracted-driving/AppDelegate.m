@@ -123,11 +123,8 @@
 		 {
 			 if([CLLocationManager regionMonitoringAvailable] && [CLLocationManager regionMonitoringEnabled])
 			 {
-				 // Create a boundary -- a circle around the current location
-				 self.viewController.currentBoundary = [[CLRegion alloc] initCircularRegionWithCenter:self.viewController.locationManager.location.coordinate radius:kSignificantLocationChange identifier:@"Current Location Boundary"];
-				 
-				 // Monitor the boundary
-				 [self.viewController.locationManager startMonitoringForRegion:self.viewController.currentBoundary];
+				 // Create a Geofence to monitor
+				 [self.viewController createAndMonitorRegion];
 			 }
 			 else
 			 {
