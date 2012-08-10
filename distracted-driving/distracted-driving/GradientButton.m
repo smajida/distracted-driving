@@ -59,12 +59,16 @@
 	highlightLayer.frame = self.layer.bounds;
 	highlightLayer.hidden = YES;
 	highlightLayer.masksToBounds = YES;
-	[self.layer insertSublayer:highlightLayer below:shineLayer];
+	[self.layer addSublayer:highlightLayer];
 }
 
 - (void)setHighlighted:(BOOL)highlight
 {
+	[CATransaction begin];
+	[CATransaction setDisableActions:YES];
 	highlightLayer.hidden = !highlight;
+	[CATransaction commit];
+	
 	[super setHighlighted:highlight];
 }
 

@@ -24,7 +24,7 @@ int const		kAlertViewDangerTag			= 5;		// Arbitrary tag id for danger tags
 double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 
 // Pointers (i.e. UIButton *)
-@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, selectedAnnotation, speedValues, lastAlertedUser, lastRecordedData, dateStopped, dangerTagsData, dangerTagsConnection, settings;
+@synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, selectedAnnotation, speedValues, lastAlertedUser, lastRecordedData, dateStopped, dangerTagsData, dangerTagsConnection, settings, tagMenu, currentBoundary, tagMenuBackground;
 
 // Low-level types (i.e. int)
 @synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
@@ -494,7 +494,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 }
 
 // Finish a location tag
-- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal
+- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal andImage:(UIImage *)image
 {
 	NSMutableURLRequest	*request;
 	NSURLConnection		*connection;
@@ -513,11 +513,29 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	
 	// Send a request to the server to mark this location as dangerous
 	request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://mpss.csce.uark.edu/~lgodfrey/add_tag.php"]];
+	[request setHTTPMethod:@"POST"];
+	
+	NSMutableDictionary *postKeysAndValues = [[NSMutableDictionary alloc] init];
+	
+	NSString *latitude	= [NSString stringWithFormat:@"%f", view.annotation.coordinate.latitude];
+	NSString *longitude	= [NSString stringWithFormat:@"%f", view.annotation.coordinate.longitude];
 	
 	if(view)
 	{
 		// Specifically tagged location
 		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&signal=%d&trip=0", device, dateString, view.annotation.coordinate.latitude, view.annotation.coordinate.longitude, traffic, roadConditions, signal];
+		
+		[postKeysAndValues setValuesForKeysWithDictionary:[NSDictionary dictionaryWithObjectsAndKeys:
+			device,							@"device",
+			dateString,						@"date",
+			latitude,						@"latitude",
+			longitude,						@"longitude",
+			traffic ? @"1" : @"0",			@"traffic",
+			roadConditions ? @"1" : @"0",	@"roadConditions",
+			signal ? @"1" : @"0",			@"signal",
+			@"0",							@"trip",
+			nil
+		]];
 		
 		// Make a new annotation (DangerTag)
 		[self dropTagAtCoordinate:view.annotation.coordinate withRoadConditions:roadConditions andTraffic:traffic andSignal:signal];
@@ -532,11 +550,61 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	{
 		// Trip tag
 		postString = [NSString stringWithFormat:@"device=%@&date=%@&latitude=%f&longitude=%f&traffic=%d&roadConditions=%d&signal=0&trip=1", device, dateString, locationManager.location.coordinate.latitude, locationManager.location.coordinate.longitude, traffic, roadConditions];
+		
+		[postKeysAndValues setValuesForKeysWithDictionary:[NSDictionary dictionaryWithObjectsAndKeys:
+			device,							@"device",
+			dateString,						@"date",
+			latitude,						@"latitude",
+			longitude,						@"longitude",
+			traffic ? @"1" : @"0",			@"traffic",
+			roadConditions ? @"1" : @"0",	@"roadConditions",
+			@"0",							@"signal",
+			@"1",							@"trip",
+			nil
+		]];
 	}
 	
-	[request setHTTPMethod:@"POST"];
-	[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
-	[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	// Prepare the image upload, if necessary
+	if(image)
+	{
+		// Get image as JPEG data
+		NSData *imageData = UIImageJPEGRepresentation(image, 0.9);
+		
+		// Set up a boundary
+		NSString *boundary = @"---------------------------------14737809831466499882746641449";
+		
+		// Set content type for the request to be a form
+		[request addValue:[NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary] forHTTPHeaderField: @"Content-Type"];
+		
+		// Create the post body
+		NSMutableData *postData = [NSMutableData data];
+		
+		// Populate with values
+		for(id key in postKeysAndValues)
+		{
+			id val = [postKeysAndValues objectForKey:key];
+			
+			[postData appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n", boundary] dataUsingEncoding:NSASCIIStringEncoding]];
+			[postData appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n", key] dataUsingEncoding:NSASCIIStringEncoding]];
+			[postData appendData:[val dataUsingEncoding:NSASCIIStringEncoding]];
+		}
+		
+		// Add image
+		[postData appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n", boundary] dataUsingEncoding:NSASCIIStringEncoding]];
+		[postData appendData:[@"Content-Disposition: form-data; name=\"picture\"; filename=\"image.jpg\"\r\n" dataUsingEncoding:NSASCIIStringEncoding]];
+		[postData appendData:[@"Content-Type: application/octet-stream\r\n" dataUsingEncoding:NSASCIIStringEncoding]];
+		[postData appendData:[@"Content-Transfer-Encoding: binary\r\n" dataUsingEncoding:NSASCIIStringEncoding]];
+		[postData appendData:[[NSString stringWithFormat:@"Content-Length: %i\r\n\r\n", imageData.length] dataUsingEncoding:NSASCIIStringEncoding]];
+		[postData appendData:[NSData dataWithData:imageData]];
+		[postData appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n", boundary] dataUsingEncoding:NSASCIIStringEncoding]];
+		
+		[request setHTTPBody:postData];
+	}
+	else
+	{
+		[request setValue:[NSString stringWithFormat:@"%d", [postString length]] forHTTPHeaderField:@"Content-length"];
+		[request setHTTPBody:[postString dataUsingEncoding:NSUTF8StringEncoding]];
+	}
 	
 	connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
 	

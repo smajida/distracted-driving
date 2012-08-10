@@ -10,7 +10,7 @@
 
 @implementation TagMenuViewController
 
-@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, signalLabel, signalSwitch, tagButton, cancelButton, uploadButton, titleText, isUploadType;
+@synthesize delegate, annotationView, titleLabel, roadSwitch, trafficSwitch, signalLabel, signalSwitch, tagButton, cancelButton, uploadButton, titleText, isUploadType, image, cameraButton;
 
 - (id)initWithTitle:(NSString *)text withUpload:(BOOL)upload
 {
@@ -47,9 +47,9 @@
 - (IBAction)closeAndTag:(id)sender
 {
 	if(delegate && annotationView)
-		[delegate tagViewAsDangerous:annotationView withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on andSignal:signalSwitch.on];
+		[delegate tagViewAsDangerous:annotationView withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on andSignal:signalSwitch.on andImage:image];
 	else if(delegate && !annotationView)
-		[delegate tagViewAsDangerous:nil withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on andSignal:signalSwitch.on];
+		[delegate tagViewAsDangerous:nil withTraffic:trafficSwitch.on andRoadConditions:roadSwitch.on andSignal:signalSwitch.on andImage:image];
 	
 	[self close:sender];
 }
@@ -62,11 +62,38 @@
 		[delegate tagMenuDidClose];
 }
 
+- (IBAction)cameraButtonWasTouched:(id)sender
+{
+	UIImagePickerController * imagePicker = [[UIImagePickerController alloc] init];
+	imagePicker.sourceType = UIImagePickerControllerSourceTypeCamera;
+	imagePicker.delegate = self;
+	[self presentModalViewController:imagePicker animated:YES];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker
+{
+	[self dismissModalViewControllerAnimated:YES];
+}
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info
+{
+	image = [info objectForKey:UIImagePickerControllerOriginalImage];
+	
+	[cameraButton setEnabled:NO];
+	[cameraButton setBackgroundColor:[UIColor grayColor]];
+	[cameraButton setTitleColor:[UIColor blackColor] forState:UIControlStateDisabled];
+	[cameraButton setTitle:@"Saved" forState:UIControlStateDisabled];
+	
+    [self dismissModalViewControllerAnimated:YES];
+}
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
 	
 	[titleLabel setText:titleText];
+	
+	image = nil;
 	
 	if(isUploadType)
 	{

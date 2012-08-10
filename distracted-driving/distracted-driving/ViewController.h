@@ -114,7 +114,7 @@ extern double const kMapSpanDelta;
 - (BOOL)isValidLocation:(CLLocation *)newLocation;
 - (void)dropPinAtCoordinate:(CLLocationCoordinate2D)coordinate;
 - (void)dropTagAtCoordinate:(CLLocationCoordinate2D)coordinate withRoadConditions:(BOOL)roadConditions andTraffic:(BOOL)traffic andSignal:(BOOL)signal;
-- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal;
+- (void)tagViewAsDangerous:(MKAnnotationView *)view withTraffic:(BOOL)traffic andRoadConditions:(BOOL)roadConditions andSignal:(BOOL)signal andImage:(UIImage *)image;
 - (void)createAndMonitorRegion;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)_oldLocation;
 - (void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region;
