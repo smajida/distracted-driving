@@ -26,6 +26,7 @@ extern float const	kTimeIntervalForTick;
 extern int const	kPauseInterval;
 extern int const	kMaximumStopTime;
 extern int const	kAutomaticallyStopTime;
+extern int const	kRemindUserToTagTime;
 extern int const	kDrasticSpeedChange;
 extern int const	kSignificantLocationChange;
 extern int const	kMaximumSpeedAge;
@@ -59,7 +60,7 @@ extern double const kMapSpanDelta;
 	UIBackgroundTaskIdentifier	bgTask;
 	int							accelValuesCollected;
 	float						accelX, accelY, accelZ, speed, thrownAwaySpeed;
-	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
+	BOOL						recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop, hasRemindedUserToTag, remindUserToTag;
 }
 
 @property (nonatomic, retain) TagMenuViewController			*tagMenu;
@@ -84,7 +85,7 @@ extern double const kMapSpanDelta;
 @property (nonatomic, assign) UIBackgroundTaskIdentifier	bgTask;
 @property (nonatomic, assign) int							accelValuesCollected;
 @property (nonatomic, assign) float							accelX, accelY, accelZ, speed, thrownAwaySpeed;
-@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
+@property (nonatomic, assign) BOOL							recording, trackingUser, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop, hasRemindedUserToTag, remindUserToTag;
 
 // Initializing functions
 - (BOOL)sqlcon;

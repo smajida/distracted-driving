@@ -10,13 +10,14 @@
 
 @implementation SettingsViewController
 
-@synthesize delegate, energySwitch, reminderSwitch, automaticSwitch;
+@synthesize delegate, energySwitch, reminderSwitch, automaticSwitch, tagSwitch;
 
 - (IBAction)saveButtonWasTouched:(id)sender
 {
 	// Save settings
 	[[NSUserDefaults standardUserDefaults] setBool:energySwitch.on forKey:@"limitBatteryConsumption"];
 	[[NSUserDefaults standardUserDefaults] setBool:!reminderSwitch.on forKey:@"doNotRemindUserToRecord"];
+	[[NSUserDefaults standardUserDefaults] setBool:!tagSwitch.on forKey:@"doNotRemindUserToTag"];
 	[[NSUserDefaults standardUserDefaults] setBool:automaticSwitch.on forKey:@"automaticallyStartAndStop"];
 	[[NSUserDefaults standardUserDefaults] synchronize];
 	
@@ -24,6 +25,7 @@
 	{
 		[delegate setLimitBatteryConsumption:energySwitch.on];
 		[delegate setRemindUserToRecord:reminderSwitch.on];
+		[delegate setRemindUserToTag:tagSwitch.on];
 		[delegate setAutomaticallyStartAndStop:automaticSwitch.on];
 		
 		[delegate settingsMenuDidClose];
@@ -50,6 +52,7 @@
 	{
 		[energySwitch setOn:[delegate limitBatteryConsumption]];
 		[reminderSwitch setOn:[delegate remindUserToRecord]];
+		[tagSwitch setOn:[delegate remindUserToTag]];
 		
 		if([CLLocationManager regionMonitoringAvailable] && [CLLocationManager regionMonitoringEnabled])
 			[automaticSwitch setOn:[delegate automaticallyStartAndStop]];

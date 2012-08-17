@@ -17,8 +17,8 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-	[TestFlight setDeviceIdentifier:[[UIDevice currentDevice] uniqueIdentifier]];
-	[TestFlight takeOff:@"6ab119d7ecfdf82ed74673d4b42400ec_MTAxNDI3MjAxMi0wNi0yMiAyMjowMDo1NS4wMjczNjI"];
+	// [TestFlight setDeviceIdentifier:[[UIDevice currentDevice] uniqueIdentifier]];
+	// [TestFlight takeOff:@"***TESTFLIGHT KEY HERE***"];
 	
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
 	
@@ -34,8 +34,8 @@
 	[UIApplication sharedApplication].idleTimerDisabled = YES;
 	
 	// Check if the app has been woken up from the background
-	if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
-		[TestFlight passCheckpoint:@"Launched from Geofence Boundary"];
+	// if([launchOptions objectForKey:UIApplicationLaunchOptionsLocationKey])
+	// 	[TestFlight passCheckpoint:@"Launched from Geofence Boundary"];
 	
     return YES;
 }
@@ -130,7 +130,7 @@
 			 {
 				 // Use significant change, because the device doesn't support Geofencing
 				 [self.viewController.locationManager startMonitoringSignificantLocationChanges];
-				 [TestFlight passCheckpoint:@"Used significant change instead of geofencing."];
+				 // [TestFlight passCheckpoint:@"Used significant change instead of geofencing."];
 			 }
 		 }
 	 }

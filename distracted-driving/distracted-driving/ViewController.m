@@ -16,6 +16,7 @@ float const		kTimeIntervalForTick		= 5.0;		// 5.0 seconds
 int const		kPauseInterval				= 10;		// 10 seconds
 int const		kMaximumStopTime			= 300;		// 5 minutes
 int const		kAutomaticallyStopTime		= 300;		// 5 minutes
+int const		kRemindUserToTagTime		= 150;		// 2.5 minutes
 int const		kDrasticSpeedChange			= 50;		// 50 mps
 int const		kSignificantLocationChange	= 100;		// 100 meters
 int const		kDataPointsForAverage		= 5;		// 5 points
@@ -27,7 +28,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 @synthesize startButton, tagButton, speedometer, dbpath, device, ticker, locationManager, oldLocation, lastCenteredLocation, accelerometer, recorder, mapView, selectedAnnotation, speedValues, lastAlertedUser, lastRecordedData, dateStopped, dangerTagsData, dangerTagsConnection, settings, tagMenu, currentBoundary, tagMenuBackground;
 
 // Low-level types (i.e. int)
-@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop;
+@synthesize accelValuesCollected, accelX, accelY, accelZ, speed, recording, trackingUser, bgTask, thrownAwaySpeed, didGetDangerTags, isUsingOnlySignificantChanges, limitBatteryConsumption, remindUserToRecord, hasBeenInBackground, automaticallyStartAndStop, hasRemindedUserToTag, remindUserToTag;
 
 /**************************
  * Initializing functions *
@@ -104,6 +105,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	
 	limitBatteryConsumption		= [settings boolForKey:@"limitBatteryConsumption"];
 	remindUserToRecord			= ![settings boolForKey:@"doNotRemindUserToRecord"];
+	remindUserToTag				= ![settings boolForKey:@"doNotRemindUserToTag"];
 	automaticallyStartAndStop	= [settings boolForKey:@"automaticallyStartAndStop"];
 }
 
@@ -156,12 +158,24 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	if(speed >= kMinimumDrivingSpeed)
 		dateStopped = [NSDate date];
 	
+	if(recording && [[NSDate date] timeIntervalSinceDate:dateStopped] > kRemindUserToTagTime && !hasRemindedUserToTag && remindUserToTag)
+	{
+		UILocalNotification *notification	= [[UILocalNotification alloc] init];
+		notification.fireDate				= [NSDate dateWithTimeIntervalSinceNow:0];
+		notification.alertBody				= @"You seem to have slowed down.  Tag traffic at this location if that's why!";
+		notification.soundName				= UILocalNotificationDefaultSoundName;
+		
+		[[UIApplication sharedApplication] scheduleLocalNotification:notification];
+		
+		hasRemindedUserToTag = YES;
+	}
+	
 	if(automaticallyStartAndStop && [[NSDate date] timeIntervalSinceDate:dateStopped] > kAutomaticallyStopTime)
 	{
 		// Automatically stop the recording
 		if(recording)
 		{
-			[TestFlight passCheckpoint:@"Automatically stopped recording data."];
+			// [TestFlight passCheckpoint:@"Automatically stopped recording data."];
 			[self startButtonWasTouched:self];
 			
 			if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
@@ -191,7 +205,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 			
 			if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 			{
-				[TestFlight passCheckpoint:@"Notified user in background to stop recording."];
+				// [TestFlight passCheckpoint:@"Notified user in background to stop recording."];
 				
 				// Alert the user they need to start recording because they are driving
 				UILocalNotification *notification	= [[UILocalNotification alloc] init];
@@ -327,7 +341,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 // Upload rows from the local database to the remote server
 - (void)uploadRows
 {
-	[TestFlight passCheckpoint:@"Uploaded recorded data to the server."];
+	// [TestFlight passCheckpoint:@"Uploaded recorded data to the server."];
 	
 	BOOL success = NO;
 	
@@ -540,8 +554,8 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		// Make a new annotation (DangerTag)
 		[self dropTagAtCoordinate:view.annotation.coordinate withRoadConditions:roadConditions andTraffic:traffic andSignal:signal];
 		
-		if(roadConditions || traffic || signal)
-			[TestFlight passCheckpoint:@"Tagged an area as dangerous."];
+		// if(roadConditions || traffic || signal)
+		// 	[TestFlight passCheckpoint:@"Tagged an area as dangerous."];
 		
 		// Remove the annotation
 		[mapView removeAnnotation:view.annotation];
@@ -673,7 +687,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	// This alert is for phones that can't use Geofencing
 	if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground && speed > kMinimumDrivingSpeed && !recording && [[NSDate date] timeIntervalSinceDate:lastAlertedUser] > kAlertExpire && !tagMenu)
 	{
-		[TestFlight passCheckpoint:@"Notified user in background via significant change."];
+		// [TestFlight passCheckpoint:@"Notified user in background via significant change."];
 		NSString *alertString = @"Don't forget to record when you're driving!";
 		
 		// Alert the user they need to start recording because they are driving
@@ -728,7 +742,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		// Start recording automatically
 		if(!recording)
 		{
-			[TestFlight passCheckpoint:@"Automatically started recording data."];
+			// [TestFlight passCheckpoint:@"Automatically started recording data."];
 			
 			if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 			{
@@ -748,7 +762,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	}
 	else if([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground)
 	{
-		[TestFlight passCheckpoint:@"Notified user in background via Geofencing."];
+		// [TestFlight passCheckpoint:@"Notified user in background via Geofencing."];
 		
 		// Alert the user they need to start recording because they are driving
 		UILocalNotification *notification	= [[UILocalNotification alloc] init];
@@ -923,7 +937,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	{
 		if(buttonIndex != [alertView cancelButtonIndex])
 		{
-			[TestFlight passCheckpoint:@"Deleted a danger tag."];
+			// [TestFlight passCheckpoint:@"Deleted a danger tag."];
 			
 			// Tell the server to delete it
 			NSString *postString = [NSString stringWithFormat:@"latitude=%f&longitude=%f", selectedAnnotation.annotation.coordinate.latitude, selectedAnnotation.annotation.coordinate.longitude];
@@ -1027,7 +1041,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	
 	if(startButton.selected)
 	{
-		[TestFlight passCheckpoint:@"Started recording data."];
+		// [TestFlight passCheckpoint:@"Started recording data."];
 		
 		// Recording
 		recording = YES;
@@ -1038,13 +1052,14 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		// Reset the date last alerted
 		lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 		dateStopped				= [NSDate date];
+		hasRemindedUserToTag	= NO;
 		
 		// Start recording
 		ticker = [NSTimer scheduledTimerWithTimeInterval:kTimeIntervalForTick target:self selector:@selector(record:) userInfo:nil repeats:YES];
 	}
 	else
 	{
-		[TestFlight passCheckpoint:@"Stopped recording data."];
+		// [TestFlight passCheckpoint:@"Stopped recording data."];
 		
 		// Done recording
 		recording = NO;
@@ -1059,15 +1074,16 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 		// Reset the alert
 		lastAlertedUser			= [NSDate dateWithTimeIntervalSinceNow:kPauseInterval];
 		dateStopped				= [NSDate date];
+		hasRemindedUserToTag	= YES;
 		
 		// Display the popup
 		if(sender == self)
 		{
-			[TestFlight passCheckpoint:@"Uploaded data automatically."];
+			// [TestFlight passCheckpoint:@"Uploaded data automatically."];
 			[self uploadRows];
 		}
-		else
-			[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
+		// else
+		// 	[self openTagMenuWithTitle:@"This Trip Had Dangerous..."];
 	}
 }
 
@@ -1096,7 +1112,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 
 - (IBAction)feedbackButtonWasTouched:(id)sender
 {
-	[TestFlight openFeedbackView];
+	// [TestFlight openFeedbackView];
 }
 
 - (IBAction)settingsButtonWasTouched:(id)sender
@@ -1398,6 +1414,7 @@ double const	kMapSpanDelta				= 0.005;	// 0.005 degrees
 	speed					= 0.0;
 	thrownAwaySpeed			= -1.0;
 	selectedAnnotation		= nil;
+	hasRemindedUserToTag	= NO;
 	
 	// Load user settings
 	[self loadUserSettings];
